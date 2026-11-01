@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+:root {
+  /* Chromatic Accents */
+  --color-primary: #B78AF2;
+  --color-coral: #FF705B;
+  --color-mint: #A8DCCB;
+  --color-sky: #BFEAF7;
+
+  /* Neutrals */
+  --color-ink: #171923;
+  --color-text-muted: #777783;
+  --color-border: #D8D7DE;
+  --color-surface: #FFFFFF;
+  --color-canvas: #F4F3F5;
+  --color-overlay: #171923;
+
+  /* Typography */
+  --font-ui: var(--font-lato), "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-grand-hotel), "Grand Hotel", cursive, Georgia, serif;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 4px 18px rgb(23 25 35 / 7%);
+  --shadow-popover: 0 10px 32px rgb(23 25 35 / 12%);
+
+  /* Base background */
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-display);
+  --font-display: var(--font-display);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  caret-color: var(--color-ink);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-sans {
+  font-family: var(--font-ui);
+}
+
+/* Browser Surface Theming */
+::selection {
+  background-color: #E3D1FA;
+  color: #171923;
+}
+
+/* Tabular numbers for dates, metrics, and countdowns */
+.tabular-numbers {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide scrollbar for clean horizontal carousel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom subtle scrollbar for desktop drawers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D8D7DE;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B78AF2;
+}
+
+/* Safe area support for iOS / mobile */
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
