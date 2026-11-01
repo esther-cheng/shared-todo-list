@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     // 1. Accepted friends (can be user_id or friend_id)
     const acceptedRows = await sql`
-      SELECT 
+      SELECT DISTINCT ON (u.id)
         f.id as friendship_id,
         u.id, u.username, u.name, u.avatar_color, u.is_private
       FROM friendships f
@@ -22,18 +22,24 @@ export async function GET(req: Request) {
         (f.friend_id = ${currentUser.id} AND u.id = f.user_id)
       )
       WHERE f.status = 'accepted'
-      ORDER BY u.name ASC;
+      ORDER BY u.id, u.name ASC;
     `;
 
-    const friends: SearchedUser[] = acceptedRows.map((r) => ({
-      id: r.id,
-      username: r.username,
-      name: r.name,
-      avatar_color: r.avatar_color,
-      is_private: Boolean(r.is_private),
-      friendship_status: "friends",
-      can_add_to_space: true,
-    }));
+    const friendsMap = new Map<string, SearchedUser>();
+    for (const r of acceptedRows) {
+      if (!friendsMap.has(r.id)) {
+        friendsMap.set(r.id, {
+          id: r.id,
+          username: r.username,
+          name: r.name,
+          avatar_color: r.avatar_color,
+          is_private: Boolean(r.is_private),
+          friendship_status: "friends",
+          can_add_to_space: true,
+        });
+      }
+    }
+    const friends: SearchedUser[] = Array.from(friendsMap.values());
 
     // 2. Incoming pending requests (target is currentUser)
     const incomingRows = await sql`

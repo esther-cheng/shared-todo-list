@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { 
   Heart, 
@@ -405,3 +407,20 @@ export function isTaskTaggedForUser(
 
   return false;
 }
+
+const colors = {
+  getSpaceIcon,
+  AVATAR_COLORS,
+  USER_HIGHLIGHTS,
+  getUserHighlightStyle,
+  getUserAvatarStyle,
+  SPACE_COLORS,
+  getSpaceColor,
+  formatDate,
+  formatShortDate,
+  formatRelativeDeadline,
+  isTaskUntouched,
+  isTaskTaggedForUser,
+};
+
+export default colors;

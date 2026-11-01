@@ -16,7 +16,9 @@ if (fs.existsSync(envPath)) {
         if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
-        process.env[key] = value;
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
       }
     }
   }
@@ -104,8 +106,7 @@ async function main() {
     await sql`
       INSERT INTO friendships (id, user_id, friend_id, status)
       VALUES 
-        ('friend-alex-taylor-1', ${alex.id}, ${taylor.id}, 'accepted'),
-        ('friend-alex-taylor-2', ${taylor.id}, ${alex.id}, 'accepted')
+        ('friend-alex-taylor-1', ${alex.id}, ${taylor.id}, 'accepted')
       ON CONFLICT (user_id, friend_id) DO NOTHING;
     `;
     console.log("✓ Connected alex and taylor as initial demo friends");

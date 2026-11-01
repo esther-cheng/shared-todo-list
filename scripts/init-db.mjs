@@ -16,7 +16,9 @@ if (fs.existsSync(envPath)) {
         if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
           value = value.slice(1, -1);
         }
-        process.env[key] = value;
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
       }
     }
   }
