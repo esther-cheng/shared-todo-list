@@ -11,7 +11,8 @@ import {
   MessageSquare, 
   RotateCcw, 
   ExternalLink,
-  AtSign
+  AtSign,
+  Settings
 } from "lucide-react";
 
 interface NotificationDropdownProps {
@@ -23,6 +24,7 @@ interface NotificationDropdownProps {
   onSelectTask: (task: Task) => void;
   onClose: () => void;
   onViewAllTagged?: () => void;
+  onOpenSettings?: () => void;
   currentUsername: string;
 }
 
@@ -35,6 +37,7 @@ export function NotificationDropdown({
   onSelectTask,
   onClose,
   onViewAllTagged,
+  onOpenSettings,
   currentUsername,
 }: NotificationDropdownProps) {
   // Filter tasks into active and dismissed
@@ -76,6 +79,19 @@ export function NotificationDropdown({
               Dismiss all
             </button>
           )}
+          {onOpenSettings && (
+            <button
+              onClick={() => {
+                onOpenSettings();
+                onClose();
+              }}
+              className="p-1 rounded-[8px] text-[#777783] hover:text-[#171923] hover:bg-[#F4F3F5] transition-colors"
+              title="Notification settings"
+              aria-label="Notification settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-1 rounded-[8px] text-[#777783] hover:text-[#171923] hover:bg-[#F4F3F5] transition-colors"
@@ -97,7 +113,7 @@ export function NotificationDropdown({
               All caught up!
             </p>
             <p className="text-[12px] text-[#777783] mt-1 max-w-[220px] leading-relaxed">
-              No pending tagged tasks for @{currentUsername.toLowerCase()} or @partner.
+              No pending tagged tasks for @{currentUsername.toLowerCase()}.
             </p>
             {dismissedCount > 0 && (
               <button
@@ -230,7 +246,7 @@ export function NotificationDropdown({
         ) : (
           <span className="flex items-center gap-1 text-[#777783]">
             <AtSign className="w-3 h-3 text-[var(--color-primary)]" />
-            Mentions for @{currentUsername} & @partner
+            Mentions for @{currentUsername}
           </span>
         )}
       </div>

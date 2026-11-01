@@ -23,11 +23,11 @@ import {
   Loader2
 } from "lucide-react";
 import { getSpaceColor, getUserAvatarStyle } from "@/lib/colors";
-import { SearchedUser } from "@/types";
+import { SearchedUser, Space } from "@/types";
 
 interface CreateSpaceModalProps {
   onClose: () => void;
-  onCreateSpace: (name: string, color: string, icon: string, memberIds?: string[]) => Promise<void>;
+  onCreateSpace: (name: string, color: string, icon: string, memberIds?: string[]) => Promise<void | Space>;
 }
 
 const AVAILABLE_COLORS = [

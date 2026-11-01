@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { parseSessionCookie, getSessionUserFromToken } from "@/lib/auth";
+import { dispatchNotification } from "@/lib/notifications";
 import { NextResponse } from "next/server";
 
 export async function POST(
@@ -21,7 +22,7 @@ export async function POST(
       return NextResponse.json({ error: "Content is required" }, { status: 400 });
     }
 
-    // Extract @mentions like @alex, @partner, @mom
+    // Extract @mentions
     const matches = content.match(/@[a-zA-Z0-9_-]+/g) || [];
     const taggedUsers = Array.from(new Set(matches.map((m: string) => m.toLowerCase())));
 
@@ -39,6 +40,31 @@ export async function POST(
       SET last_activity_at = NOW(), updated_at = NOW() 
       WHERE id = ${id};
     `;
+
+    // Dispatch notifications to tagged users
+    if (taggedUsers.length > 0) {
+      try {
+        const cleanUsernames = (taggedUsers as string[]).map((t) => t.replace(/^@/, ""));
+        const usersToNotify = await sql`
+          SELECT id, username FROM users 
+          WHERE username = ANY(${cleanUsernames}) AND id != ${user.id};
+        `;
+        const taskRecord = await sql`SELECT title FROM tasks WHERE id = ${id};`;
+        const taskTitle = taskRecord[0]?.title || "shared task";
+
+        for (const targetUser of usersToNotify) {
+          await dispatchNotification({
+            userId: targetUser.id,
+            title: `You were tagged by ${author}`,
+            message: `${author} mentioned you on "${taskTitle}": "${content.slice(0, 100)}"`,
+            taskId: id,
+            triggerType: "mention",
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to dispatch mention notifications:", notifErr);
+      }
+    }
 
     return NextResponse.json({ note: result[0] });
   } catch (error) {

@@ -7,6 +7,51 @@ export interface User {
   created_at: string;
 }
 
+export interface UserNotificationSettings {
+  id: string;
+  user_id: string;
+  email: string | null;
+  email_verified: boolean;
+  phone_number?: string | null;
+  phone_verified?: boolean;
+  notify_mentions: boolean;
+  notify_prep_window: boolean;
+  notify_due_soon: boolean;
+  notify_task_completed: boolean;
+  notify_space_invite: boolean;
+  channel_email: boolean;
+  channel_push: boolean;
+  channel_sms?: boolean;
+  timing: "instant" | "daily_digest";
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface NotificationLog {
+  id: string;
+  user_id: string;
+  channel: "email" | "push" | "sms" | "in_app";
+  title: string;
+  message: string;
+  task_id: string | null;
+  status: "sent" | "delivered" | "pending";
+  created_at: string;
+}
+
+export interface PushSubscriptionRecord {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface SpaceMember {
   user_id: string;
   username: string;

@@ -125,6 +125,58 @@ async function main() {
   `;
   console.log("✓ Task notes table ready");
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_notification_settings (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+      email TEXT,
+      email_verified BOOLEAN NOT NULL DEFAULT false,
+      phone_number TEXT,
+      phone_verified BOOLEAN NOT NULL DEFAULT false,
+      notify_mentions BOOLEAN NOT NULL DEFAULT true,
+      notify_prep_window BOOLEAN NOT NULL DEFAULT true,
+      notify_due_soon BOOLEAN NOT NULL DEFAULT true,
+      notify_task_completed BOOLEAN NOT NULL DEFAULT false,
+      notify_space_invite BOOLEAN NOT NULL DEFAULT true,
+      channel_email BOOLEAN NOT NULL DEFAULT true,
+      channel_sms BOOLEAN NOT NULL DEFAULT true,
+      timing TEXT NOT NULL DEFAULT 'instant',
+      quiet_hours_enabled BOOLEAN NOT NULL DEFAULT false,
+      quiet_hours_start TEXT DEFAULT '22:00',
+      quiet_hours_end TEXT DEFAULT '08:00',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+  console.log("✓ user_notification_settings table ready");
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS verification_codes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      target TEXT NOT NULL,
+      type TEXT NOT NULL,
+      code TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+  console.log("✓ verification_codes table ready");
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS notification_logs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'sent',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `;
+  console.log("✓ notification_logs table ready");
+
   // Seed default demo user if none exists
   const existingUsers = await sql`SELECT COUNT(*) FROM users;`;
   if (parseInt(existingUsers[0].count) === 0) {

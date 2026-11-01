@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Task, Space, User, FilterCounts, SearchedUser, FriendsData } from "@/types";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
@@ -19,7 +19,7 @@ import { WelcomeView } from "@/components/WelcomeView";
 import { FriendsModal } from "@/components/FriendsModal";
 import { SpaceMembersModal } from "@/components/SpaceMembersModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
-import { Loader2, CheckSquare, Users, X } from "lucide-react";
+import { Loader2, CheckSquare, Users, X, AtSign } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -46,6 +46,7 @@ export default function HomePage() {
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "tagged" | "radar">("all");
   const [selectedFriend, setSelectedFriend] = useState<SearchedUser | null>(null);
+  const [selectedCommentTag, setSelectedCommentTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [friendsData, setFriendsData] = useState<FriendsData>({
     friends: [],
@@ -59,6 +60,7 @@ export default function HomePage() {
   const [isSpaceModalOpen, setIsSpaceModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"profile" | "color" | "notifications" | "security">("profile");
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
   const [selectedSpaceForMembers, setSelectedSpaceForMembers] = useState<Space | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
@@ -326,10 +328,10 @@ export default function HomePage() {
   // Create space
   const handleCreateSpace = async (
     name: string,
-    color: string,
-    icon: string,
+    color: string = "purple",
+    icon: string = "folder",
     memberIds?: string[]
-  ) => {
+  ): Promise<Space> => {
     try {
       const res = await fetch("/api/spaces", {
         method: "POST",
@@ -341,9 +343,14 @@ export default function HomePage() {
         throw new Error(data.error || "Failed to create space");
       }
       if (data.space) {
-        setSpaces((prev) => [...prev, data.space]);
+        setSpaces((prev) => {
+          if (prev.some((s) => s.id === data.space.id)) return prev;
+          return [...prev, data.space];
+        });
         setSelectedSpaceId(data.space.id);
+        return data.space;
       }
+      throw new Error("No space returned");
     } catch (err) {
       console.error("Failed to create space:", err);
       throw err;
@@ -366,7 +373,23 @@ export default function HomePage() {
     }
   };
 
-  // Filter tasks based on search, space, and focus filter
+  // All unique users tagged in comments across tasks
+  const commentTags = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tasks) {
+      if (t.tagged_users && Array.isArray(t.tagged_users)) {
+        for (const u of t.tagged_users) {
+          if (u && typeof u === "string" && u.trim()) {
+            const formatted = u.startsWith("@") ? u : `@${u}`;
+            map.set(formatted.toLowerCase(), formatted);
+          }
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+  }, [tasks]);
+
+  // Filter tasks based on search, space, focus filter, friend, and tagged comments
   const filteredTasks = tasks.filter((t) => {
     // Space filter
     if (selectedSpaceId !== "all" && t.space_id !== selectedSpaceId) {
@@ -382,13 +405,31 @@ export default function HomePage() {
       if (!isTagged && !authorMatch) return false;
     }
 
+    // Filter by person tagged in comments
+    if (selectedCommentTag) {
+      const cleanTarget = selectedCommentTag.toLowerCase().replace(/^@/, "");
+      const isTaggedInComments = t.tagged_users?.some((u) => {
+        if (!u || typeof u !== "string") return false;
+        const cleanU = u.toLowerCase().replace(/^@/, "");
+        return cleanU === cleanTarget;
+      }) ?? false;
+      if (!isTaggedInComments) return false;
+    }
+
     // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
+      const qClean = q.replace(/^@/, "");
       const matchTitle = t.title.toLowerCase().includes(q);
       const matchDesc = t.description?.toLowerCase().includes(q) ?? false;
       const matchSpace = t.space_name?.toLowerCase().includes(q) ?? false;
-      if (!matchTitle && !matchDesc && !matchSpace) return false;
+      const matchTaggedUser = t.tagged_users?.some((u) => {
+        if (!u || typeof u !== "string") return false;
+        const uLower = u.toLowerCase();
+        const uClean = uLower.replace(/^@/, "");
+        return uLower.includes(q) || uClean.includes(qClean);
+      }) ?? false;
+      if (!matchTitle && !matchDesc && !matchSpace && !matchTaggedUser) return false;
     }
 
     // Special focus filter
@@ -466,7 +507,14 @@ export default function HomePage() {
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenSettings={() => {
+          setSettingsInitialTab("profile");
+          setIsSettingsModalOpen(true);
+        }}
+        onOpenNotificationSettings={() => {
+          setSettingsInitialTab("notifications");
+          setIsSettingsModalOpen(true);
+        }}
         onOpenFriends={() => setIsFriendsModalOpen(true)}
         tasks={tasks}
         onSelectUser={() => setIsFriendsModalOpen(true)}
@@ -480,6 +528,10 @@ export default function HomePage() {
         userColor={userColor}
         onOpenTaggedFilter={() => {
           setActiveFilter("tagged");
+          setSelectedSpaceId("all");
+        }}
+        onFilterByMention={(mention) => {
+          setSelectedCommentTag(mention);
           setSelectedSpaceId("all");
         }}
       />
@@ -521,6 +573,9 @@ export default function HomePage() {
               selectedFriend={selectedFriend}
               onSelectFriend={setSelectedFriend}
               onQuickAddToSpace={handleQuickAddToSpace}
+              commentTags={commentTags}
+              selectedCommentTag={selectedCommentTag}
+              onSelectCommentTag={setSelectedCommentTag}
             />
           </div>
 
@@ -574,11 +629,64 @@ export default function HomePage() {
                     </button>
                   </span>
                 )}
+
+                {/* Tagged in Comments Active Badge */}
+                {selectedCommentTag && (
+                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#F4ECFC] text-[#6B21A8] border border-[#E5D4F9] inline-flex items-center gap-1.5 shadow-2xs">
+                    <AtSign className="w-3 h-3 text-[#6B21A8]" />
+                    <span>Tagged: {selectedCommentTag}</span>
+                    <button
+                      onClick={() => setSelectedCommentTag(null)}
+                      className="hover:text-[#FF705B] cursor-pointer"
+                      title="Clear tagged in comments filter"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
                 <span className="text-[#777783] font-normal">
                   ({filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"})
                 </span>
               </div>
             </div>
+
+            {/* Tagged in Comments Filter Pills */}
+            {commentTags.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap px-1 text-xs">
+                <span className="text-[11px] font-semibold text-[#777783] flex items-center gap-1">
+                  <AtSign className="w-3 h-3 text-[#B78AF2]" />
+                  <span>Tagged in comments:</span>
+                </span>
+                {commentTags.map((tag) => {
+                  const isSelected = selectedCommentTag?.toLowerCase() === tag.toLowerCase();
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedCommentTag(isSelected ? null : tag)}
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
+                        isSelected
+                          ? "bg-[#171923] text-white shadow-xs font-bold"
+                          : "bg-[#FFFFFF] text-[#171923] border border-[#D8D7DE] hover:border-[#171923]"
+                      }`}
+                      title={isSelected ? `Filtering by ${tag}. Click to clear.` : `Filter tasks where ${tag} is tagged in comments`}
+                    >
+                      <span>{tag}</span>
+                      {isSelected && <X className="w-2.5 h-2.5" />}
+                    </button>
+                  );
+                })}
+                {selectedCommentTag && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCommentTag(null)}
+                    className="text-[11px] text-[#777783] hover:text-[#FF705B] font-medium underline ml-1 cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* View Render */}
             {isLoading ? (
@@ -678,6 +786,9 @@ export default function HomePage() {
           defaultSpaceId={selectedSpaceId !== "all" ? selectedSpaceId : undefined}
           onClose={() => setIsCreateModalOpen(false)}
           onCreateTask={handleCreateTask}
+          onCreateSpace={async (name: string) => {
+            return await handleCreateSpace(name, "purple", "folder");
+          }}
         />
       )}
 
@@ -693,6 +804,7 @@ export default function HomePage() {
       {isSettingsModalOpen && currentUser && (
         <UserSettingsModal
           user={currentUser}
+          initialTab={settingsInitialTab}
           onClose={() => setIsSettingsModalOpen(false)}
           onUpdateUser={(updatedUser) => {
             setCurrentUser(updatedUser);

@@ -50,50 +50,50 @@ function TaskDetailModalContent({
   const activeAvatarStyle = getUserAvatarStyle(userColor || "purple");
   const userHighlight = getUserHighlightStyle(userColor);
 
-  // Collect available tags: defaults + current user tag + tags found in task notes
-  const defaultTags = ["@alex", "@taylor", "@partner"];
-  const userTag = currentUsername ? `@${currentUsername.toLowerCase().replace(/^@/, "")}` : null;
-
-  const noteTags = new Set<string>();
+  // Collect tags strictly from people tagged in the comments / notes
+  const noteTagsMap = new Map<string, string>();
   if (task.notes) {
     for (const n of task.notes) {
       if (n.tagged_users && Array.isArray(n.tagged_users)) {
         for (const t of n.tagged_users) {
-          if (typeof t === "string" && t.startsWith("@")) {
-            noteTags.add(t.toLowerCase());
+          if (typeof t === "string" && t.trim()) {
+            const normalized = t.startsWith("@") ? t : `@${t}`;
+            noteTagsMap.set(normalized.toLowerCase(), normalized);
           }
         }
       }
       const matches = n.content?.match(/@[a-zA-Z0-9_-]+/g);
       if (matches) {
         for (const m of matches) {
-          noteTags.add(m.toLowerCase());
+          noteTagsMap.set(m.toLowerCase(), m);
         }
       }
     }
   }
 
-  const availableTags = Array.from(
-    new Set([
-      ...(userTag ? [userTag] : []),
-      ...defaultTags,
-      ...Array.from(noteTags),
-    ])
-  );
+  const availableTags = Array.from(noteTagsMap.values());
 
   // Filter notes based on active tag filter
   const filteredNotes = task.notes ? task.notes.filter((note) => {
     if (!selectedTag) return true;
     const targetTag = selectedTag.toLowerCase();
+    const cleanTarget = targetTag.replace(/^@/, "");
 
     if (note.tagged_users && Array.isArray(note.tagged_users)) {
-      if (note.tagged_users.some((t) => typeof t === "string" && t.toLowerCase() === targetTag)) {
+      if (note.tagged_users.some((t) => {
+        if (typeof t !== "string") return false;
+        const cleanT = t.toLowerCase().replace(/^@/, "");
+        return cleanT === cleanTarget;
+      })) {
         return true;
       }
     }
 
-    if (note.content && note.content.toLowerCase().includes(targetTag)) {
-      return true;
+    if (note.content) {
+      const lower = note.content.toLowerCase();
+      if (lower.includes(`@${cleanTarget}`) || lower.includes(targetTag)) {
+        return true;
+      }
     }
 
     return false;
@@ -307,39 +307,42 @@ function TaskDetailModalContent({
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase">
                 Notes & Mentions ({filteredNotes.length}{selectedTag ? ` of ${task.notes?.length || 0}` : ""})
               </label>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {selectedTag && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTag(null)}
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#EBE9ED] hover:bg-[#D8D7DE] text-[#171923] transition-colors cursor-pointer"
-                  >
-                    All
-                  </button>
-                )}
-                {availableTags.map((tag) => {
-                  const isSelected = selectedTag?.toLowerCase() === tag.toLowerCase();
-                  return (
+              {availableTags.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-[#777783] font-medium mr-0.5">Filter:</span>
+                  {selectedTag && (
                     <button
-                      key={tag}
                       type="button"
-                      onClick={() => {
-                        // Toggles filter by tag; strictly does NOT insert mention into note input
-                        setSelectedTag(isSelected ? null : tag);
-                      }}
-                      className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
-                        isSelected
-                          ? `${activeAvatarStyle.bg} ${activeAvatarStyle.text} shadow-xs ring-2 ring-offset-1 ring-[#171923]/20 font-bold`
-                          : "bg-[#F4F3F5] hover:bg-[#D8D7DE] text-[#171923] border border-transparent"
-                      }`}
-                      title={isSelected ? `Filtering by ${tag}. Click to clear.` : `Filter notes by ${tag}`}
+                      onClick={() => setSelectedTag(null)}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#EBE9ED] hover:bg-[#D8D7DE] text-[#171923] transition-colors cursor-pointer"
                     >
-                      <span>{tag}</span>
-                      {isSelected && <span className="text-[9px] opacity-80">✕</span>}
+                      All
                     </button>
-                  );
-                })}
-              </div>
+                  )}
+                  {availableTags.map((tag) => {
+                    const isSelected = selectedTag?.toLowerCase() === tag.toLowerCase();
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          // Toggles filter by tag; strictly does NOT insert mention into note input
+                          setSelectedTag(isSelected ? null : tag);
+                        }}
+                        className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? `${activeAvatarStyle.bg} ${activeAvatarStyle.text} shadow-xs ring-2 ring-offset-1 ring-[#171923]/20 font-bold`
+                            : "bg-[#F4F3F5] hover:bg-[#D8D7DE] text-[#171923] border border-transparent"
+                        }`}
+                        title={isSelected ? `Filtering by ${tag}. Click to clear.` : `Filter notes mentioning ${tag}`}
+                      >
+                        <span>{tag}</span>
+                        {isSelected && <span className="text-[9px] opacity-80">✕</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Notes List */}

@@ -27,6 +27,8 @@ interface HeaderProps {
   taggedCount?: number;
   userColor?: string;
   onOpenTaggedFilter: () => void;
+  onFilterByMention?: (mention: string) => void;
+  onOpenNotificationSettings?: () => void;
 }
 
 export function Header({
@@ -48,6 +50,8 @@ export function Header({
   onSelectUser = () => {},
   taggedCount,
   onOpenTaggedFilter,
+  onFilterByMention,
+  onOpenNotificationSettings,
 }: HeaderProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -146,7 +150,11 @@ export function Header({
               onSelectTask={onSelectTask}
               onSelectUser={onSelectUser}
               onFilterByMention={(mention) => {
-                onSearchChange(mention);
+                if (onFilterByMention) {
+                  onFilterByMention(mention);
+                } else {
+                  onSearchChange(mention);
+                }
                 setIsSearchOpen(false);
               }}
             />
@@ -212,6 +220,7 @@ export function Header({
                 onSelectTask={onSelectTask}
                 onClose={() => setIsNotificationsOpen(false)}
                 onViewAllTagged={onOpenTaggedFilter}
+                onOpenSettings={onOpenNotificationSettings || onOpenSettings}
                 currentUsername={currentUser ? currentUser.username : "alex"}
               />
             )}
@@ -286,20 +295,6 @@ export function Header({
 
                   {/* Options */}
                   <div className="space-y-0.5">
-                    {/* Friends & People */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        onOpenFriends();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-[#171923] hover:bg-[#F4F3F5] rounded-[10px] transition-colors group cursor-pointer text-left"
-                      role="menuitem"
-                    >
-                      <Users className="w-4 h-4 text-[#777783] group-hover:text-[#171923] transition-colors shrink-0" />
-                      <span>Friends & people</span>
-                    </button>
-
                     {/* User Settings */}
                     <button
                       type="button"
@@ -371,7 +366,11 @@ export function Header({
               onSelectTask={onSelectTask}
               onSelectUser={onSelectUser}
               onFilterByMention={(mention) => {
-                onSearchChange(mention);
+                if (onFilterByMention) {
+                  onFilterByMention(mention);
+                } else {
+                  onSearchChange(mention);
+                }
                 setIsSearchOpen(false);
               }}
             />

@@ -388,21 +388,18 @@ export function isTaskTaggedForUser(
   if (task.tagged_users && Array.isArray(task.tagged_users)) {
     const lowerTags = task.tagged_users.map((u) => u.toLowerCase());
     if (lowerTags.includes(userTag)) return true;
-    if (lowerTags.includes("@partner")) return true;
   }
 
   // Check description
   if (task.description) {
     const descLower = task.description.toLowerCase();
     if (descLower.includes(userTag)) return true;
-    if (descLower.includes("@partner")) return true;
   }
 
   // Check title
   if (task.title) {
     const titleLower = task.title.toLowerCase();
     if (titleLower.includes(userTag)) return true;
-    if (titleLower.includes("@partner")) return true;
   }
 
   return false;

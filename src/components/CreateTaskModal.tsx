@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Space } from "@/types";
-import { formatDate, getUserHighlightStyle } from "@/lib/colors";
-import { X, Clock, Calendar, Plus } from "lucide-react";
+import { formatDate, getUserHighlightStyle, getSpaceColor } from "@/lib/colors";
+import { X, Clock, Calendar, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
 
 interface CreateTaskModalProps {
   spaces: Space[];
@@ -19,6 +19,7 @@ interface CreateTaskModalProps {
     lead_time_days: number;
     created_by: string;
   }) => Promise<void>;
+  onCreateSpace?: (name: string) => Promise<Space>;
 }
 
 export function CreateTaskModal({
@@ -28,6 +29,7 @@ export function CreateTaskModal({
   defaultSpaceId,
   onClose,
   onCreateTask,
+  onCreateSpace,
 }: CreateTaskModalProps) {
   const userHighlight = getUserHighlightStyle(userColor);
   const [draftLoaded] = useState(() => {
@@ -40,6 +42,12 @@ export function CreateTaskModal({
     }
   });
 
+  const [availableSpaces, setAvailableSpaces] = useState<Space[]>(spaces);
+
+  useEffect(() => {
+    setAvailableSpaces(spaces);
+  }, [spaces]);
+
   const [title, setTitle] = useState(() => draftLoaded?.title || "");
   const [description, setDescription] = useState(() => draftLoaded?.description || "");
   const [spaceId, setSpaceId] = useState(() => {
@@ -48,6 +56,78 @@ export function CreateTaskModal({
     }
     return defaultSpaceId || spaces[0]?.id || "";
   });
+
+  const selectedSpace = availableSpaces.find((s) => s.id === spaceId);
+  const selectedSpaceColor = selectedSpace ? getSpaceColor(selectedSpace.color) : getSpaceColor("purple");
+
+  const [spaceSearchQuery, setSpaceSearchQuery] = useState(() => selectedSpace?.name || "");
+  const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
+  const [isCreatingSpace, setIsCreatingSpace] = useState(false);
+  const spaceContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync spaceSearchQuery when selectedSpace changes
+  useEffect(() => {
+    if (selectedSpace) {
+      setSpaceSearchQuery(selectedSpace.name);
+    }
+  }, [selectedSpace]);
+
+  // Handle outside click to close dropdown and restore search query if incomplete
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (spaceContainerRef.current && !spaceContainerRef.current.contains(e.target as Node)) {
+        setIsSpaceDropdownOpen(false);
+        if (selectedSpace) {
+          setSpaceSearchQuery(selectedSpace.name);
+        }
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [selectedSpace]);
+
+  const cleanQuery = spaceSearchQuery.trim();
+  const filteredSpaces = availableSpaces.filter((s) =>
+    s.name.toLowerCase().includes(cleanQuery.toLowerCase())
+  );
+  const exactMatchExists = availableSpaces.some(
+    (s) => s.name.toLowerCase() === cleanQuery.toLowerCase()
+  );
+  const canCreateOption = cleanQuery.length > 0 && !exactMatchExists;
+
+  const handleCreateInlineSpace = async (newSpaceName: string) => {
+    if (!newSpaceName.trim() || isCreatingSpace) return;
+    setIsCreatingSpace(true);
+    try {
+      let createdSpace: Space;
+      if (onCreateSpace) {
+        createdSpace = await onCreateSpace(newSpaceName.trim());
+      } else {
+        const res = await fetch("/api/spaces", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newSpaceName.trim(), color: "purple", icon: "folder" }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.space) {
+          throw new Error(data.error || "Failed to create space");
+        }
+        createdSpace = data.space;
+      }
+
+      setAvailableSpaces((prev) => {
+        if (prev.some((s) => s.id === createdSpace.id)) return prev;
+        return [...prev, createdSpace];
+      });
+      setSpaceId(createdSpace.id);
+      setSpaceSearchQuery(createdSpace.name);
+      setIsSpaceDropdownOpen(false);
+    } catch (err) {
+      console.error("Failed to create inline space:", err);
+    } finally {
+      setIsCreatingSpace(false);
+    }
+  };
   const [deadline, setDeadline] = useState(() => draftLoaded?.deadline || "");
   const [leadTimeDays, setLeadTimeDays] = useState<string | number>(() => draftLoaded?.leadTimeDays ?? 0);
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => Boolean(
@@ -173,22 +253,120 @@ export function CreateTaskModal({
         )}
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
-          {/* Space Selector */}
-          <div>
+          {/* Space Selector with Inline Create */}
+          <div className="relative" ref={spaceContainerRef}>
             <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 block">
               Space
             </label>
-            <select
-              value={spaceId}
-              onChange={(e) => setSpaceId(e.target.value)}
-              className="w-full text-xs font-medium px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[40px]"
-            >
-              {spaces.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex items-center">
+              {selectedSpace && (
+                <span
+                  className={`absolute left-3 w-2.5 h-2.5 rounded-full pointer-events-none ${
+                    selectedSpaceColor.badgeBg || "bg-[#B78AF2]"
+                  } border ${selectedSpaceColor.badgeBorder || "border-[#B78AF2]"}`}
+                />
+              )}
+              <input
+                type="text"
+                value={spaceSearchQuery}
+                onChange={(e) => {
+                  setSpaceSearchQuery(e.target.value);
+                  setIsSpaceDropdownOpen(true);
+                }}
+                onFocus={() => setIsSpaceDropdownOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (isSpaceDropdownOpen && canCreateOption) {
+                      e.preventDefault();
+                      handleCreateInlineSpace(cleanQuery);
+                    } else if (isSpaceDropdownOpen && filteredSpaces.length > 0) {
+                      e.preventDefault();
+                      setSpaceId(filteredSpaces[0].id);
+                      setSpaceSearchQuery(filteredSpaces[0].name);
+                      setIsSpaceDropdownOpen(false);
+                    }
+                  } else if (e.key === "Escape") {
+                    setIsSpaceDropdownOpen(false);
+                    if (selectedSpace) setSpaceSearchQuery(selectedSpace.name);
+                  }
+                }}
+                placeholder="Search or enter space name..."
+                className={`w-full text-xs font-semibold ${
+                  selectedSpace ? "pl-8" : "pl-3"
+                } pr-8 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[40px]`}
+              />
+              <button
+                type="button"
+                onClick={() => setIsSpaceDropdownOpen((prev) => !prev)}
+                className="absolute right-2 p-1 text-[#777783] hover:text-[#171923] cursor-pointer"
+                tabIndex={-1}
+                aria-label="Toggle space dropdown"
+              >
+                <ChevronDown className={`w-4 h-4 transition-transform ${isSpaceDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+            </div>
+
+            {/* Space Dropdown Popover */}
+            {isSpaceDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] rounded-[14px] border border-[#D8D7DE] shadow-[0_10px_32px_rgba(23,25,35,0.12)] p-1.5 z-50 max-h-56 overflow-y-auto space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                {filteredSpaces.map((s) => {
+                  const sColor = getSpaceColor(s.color);
+                  const isSelected = s.id === spaceId;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setSpaceId(s.id);
+                        setSpaceSearchQuery(s.name);
+                        setIsSpaceDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-2 text-xs rounded-[8px] transition-colors cursor-pointer text-left ${
+                        isSelected
+                          ? "bg-[#F4F3F5] text-[#171923] font-bold"
+                          : "text-[#171923] hover:bg-[#F4F3F5]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${sColor.badgeBg || "bg-[#B78AF2]"}`} />
+                        <span className="truncate">{s.name}</span>
+                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-[#171923] shrink-0" />}
+                    </button>
+                  );
+                })}
+
+                {/* Inline creation option when typed name does not exist */}
+                {canCreateOption && (
+                  <button
+                    type="button"
+                    disabled={isCreatingSpace}
+                    onClick={() => handleCreateInlineSpace(cleanQuery)}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 text-xs rounded-[8px] bg-[#F4ECFC]/70 hover:bg-[#F4ECFC] text-[#171923] font-semibold transition-colors cursor-pointer group text-left border border-dashed border-[#B78AF2]/50"
+                  >
+                    {isCreatingSpace ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#6B21A8] shrink-0" />
+                    ) : (
+                      <span className="w-5 h-5 rounded-[6px] bg-[#B78AF2]/20 text-[#6B21A8] flex items-center justify-center shrink-0">
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {cleanQuery}
+                    </span>
+                    <span className="ml-auto text-[10px] text-[#777783] group-hover:text-[#6B21A8] font-normal shrink-0">
+                      Create space
+                    </span>
+                  </button>
+                )}
+
+                {filteredSpaces.length === 0 && !canCreateOption && (
+                  <div className="p-3 text-center text-[#777783] text-[11px]">
+                    No spaces available. Type a name to create one.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Title */}

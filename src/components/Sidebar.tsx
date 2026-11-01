@@ -35,6 +35,9 @@ interface SidebarProps {
   selectedFriend?: SearchedUser | null;
   onSelectFriend?: (friend: SearchedUser | null) => void;
   onQuickAddToSpace?: (user: SearchedUser, spaceId: string) => void;
+  commentTags?: string[];
+  selectedCommentTag?: string | null;
+  onSelectCommentTag?: (tag: string | null) => void;
 }
 
 export function Sidebar({
@@ -55,6 +58,9 @@ export function Sidebar({
   selectedFriend = null,
   onSelectFriend = () => {},
   onQuickAddToSpace,
+  commentTags = [],
+  selectedCommentTag = null,
+  onSelectCommentTag = () => {},
 }: SidebarProps) {
   const userHighlight = getUserHighlightStyle(userColor);
   const activeSpace = selectedSpaceId !== "all" ? spaces.find((s) => s.id === selectedSpaceId) : null;
@@ -282,6 +288,49 @@ export function Sidebar({
           </span>
         </button>
       </div>
+
+      {/* Tagged in Comments Filter Section */}
+      {commentTags.length > 0 && (
+        <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-2.5 shadow-[0_2px_10px_rgba(23,25,35,0.02)] space-y-1.5">
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase">
+              Tagged in comments
+            </span>
+            {selectedCommentTag && (
+              <button
+                type="button"
+                onClick={() => onSelectCommentTag(null)}
+                className="text-[11px] text-[#777783] hover:text-[#FF705B] font-semibold cursor-pointer"
+                title="Clear tag filter"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1 px-1">
+            {commentTags.map((tag) => {
+              const isSelected = selectedCommentTag?.toLowerCase() === tag.toLowerCase();
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => onSelectCommentTag(isSelected ? null : tag)}
+                  className={`text-[12px] font-medium px-2.5 py-1 rounded-[10px] transition-all cursor-pointer flex items-center gap-1 ${
+                    isSelected
+                      ? "bg-[#171923] text-white font-semibold shadow-xs"
+                      : "bg-[#F4F3F5] text-[#171923] hover:bg-[#D8D7DE]"
+                  }`}
+                  title={isSelected ? `Filtering by ${tag}. Click to clear.` : `Filter by ${tag}`}
+                >
+                  <AtSign className="w-3 h-3 opacity-70" />
+                  <span>{tag.replace(/^@/, "")}</span>
+                  {isSelected && <X className="w-3 h-3 ml-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Shared Spaces Section */}
       <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-2.5 shadow-[0_2px_10px_rgba(23,25,35,0.02)]">

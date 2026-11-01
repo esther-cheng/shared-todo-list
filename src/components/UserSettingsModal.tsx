@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { User } from "@/types";
 import { AVATAR_COLORS, getUserAvatarStyle } from "@/lib/colors";
+import { NotificationSettingsTab } from "@/components/NotificationSettingsTab";
 import { 
   X, 
   User as UserIcon, 
@@ -14,23 +15,26 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  Globe
+  Globe,
+  Bell
 } from "lucide-react";
 
 interface UserSettingsModalProps {
   user: User;
   onClose: () => void;
   onUpdateUser: (updatedUser: User) => void;
+  initialTab?: SettingsTab;
 }
 
-type SettingsTab = "profile" | "color" | "security";
+type SettingsTab = "profile" | "color" | "notifications" | "security";
 
 export function UserSettingsModal({
   user,
   onClose,
   onUpdateUser,
+  initialTab = "profile",
 }: UserSettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   // Form states
   const [name, setName] = useState(user.name);
@@ -197,9 +201,9 @@ export function UserSettingsModal({
           </button>
         </div>
 
-        {/* Tab Navigation - Fully visible 3-column segmented control on mobile & desktop */}
-        <div className="px-3 sm:px-6 py-2.5 border-b border-[#D8D7DE]/70 bg-[#F4F3F5]/80 shrink-0">
-          <div className="grid grid-cols-3 gap-1 p-1 bg-[#EBE9ED] dark:bg-zinc-800 rounded-[14px]">
+        {/* Tab Navigation - Fully visible 4-column segmented control on mobile & desktop */}
+        <div className="px-2.5 sm:px-6 py-2.5 border-b border-[#D8D7DE]/70 bg-[#F4F3F5]/80 shrink-0">
+          <div className="grid grid-cols-4 gap-1 p-1 bg-[#EBE9ED] dark:bg-zinc-800 rounded-[14px]">
             <button
               type="button"
               onClick={() => {
@@ -207,15 +211,14 @@ export function UserSettingsModal({
                 setError(null);
                 setSuccessMessage(null);
               }}
-              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2.5 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
                 activeTab === "profile"
                   ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
                   : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
               }`}
             >
-              <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="sm:hidden">Profile</span>
-              <span className="hidden sm:inline">Profile & Account</span>
+              <UserIcon className="w-3.5 h-3.5 shrink-0" />
+              <span>Profile</span>
             </button>
 
             <button
@@ -225,15 +228,33 @@ export function UserSettingsModal({
                 setError(null);
                 setSuccessMessage(null);
               }}
-              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2.5 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
                 activeTab === "color"
                   ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
                   : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
               }`}
             >
-              <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="sm:hidden">Avatar</span>
-              <span className="hidden sm:inline">Avatar & Color</span>
+              <Palette className="w-3.5 h-3.5 shrink-0" />
+              <span className="sm:hidden">Color</span>
+              <span className="hidden sm:inline">Avatar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("notifications");
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2.5 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+                activeTab === "notifications"
+                  ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
+                  : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5 shrink-0" />
+              <span className="sm:hidden">Alerts</span>
+              <span className="hidden sm:inline">Notifications</span>
             </button>
 
             <button
@@ -243,15 +264,14 @@ export function UserSettingsModal({
                 setError(null);
                 setSuccessMessage(null);
               }}
-              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1 sm:px-2.5 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
                 activeTab === "security"
                   ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
                   : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
               }`}
             >
-              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="sm:hidden">Security</span>
-              <span className="hidden sm:inline">Password & Security</span>
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+              <span>Security</span>
             </button>
           </div>
         </div>
@@ -429,7 +449,12 @@ export function UserSettingsModal({
               </div>
             )}
 
-            {/* TAB 3: Password & Security */}
+            {/* TAB 3: Notifications & Alerts */}
+            {activeTab === "notifications" && (
+              <NotificationSettingsTab user={user} />
+            )}
+
+            {/* TAB 4: Password & Security */}
             {activeTab === "security" && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 p-3 rounded-[12px] bg-[#F4F3F5] text-[#171923] text-[12px]">
@@ -527,26 +552,38 @@ export function UserSettingsModal({
 
           {/* Modal Footer */}
           <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 sm:py-4 bg-[#F4F3F5] border-t border-[#D8D7DE]/70 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isLoading}
-              className="px-4 py-2.5 rounded-[12px] text-[13px] font-semibold text-[#171923] bg-[#FFFFFF] border border-[#D8D7DE] hover:bg-[#F4F3F5] active:scale-[0.98] transition-all min-h-[44px]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaveDisabled}
-              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-[12px] text-[13px] font-semibold transition-all min-h-[44px] shadow-xs select-none ${
-                isSaveDisabled
-                  ? "bg-[#D8D7DE] text-[#777783] cursor-not-allowed shadow-none"
-                  : "bg-[#171923] text-white hover:bg-[#2D313E] active:scale-[0.98] cursor-pointer"
-              }`}
-            >
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin text-[#B78AF2]" />}
-              <span>Save changes</span>
-            </button>
+            {activeTab === "notifications" ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2.5 rounded-[12px] text-[13px] font-semibold bg-[#171923] text-white hover:bg-[#2D313E] active:scale-[0.98] transition-all cursor-pointer min-h-[44px]"
+              >
+                Done
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isLoading}
+                  className="px-4 py-2.5 rounded-[12px] text-[13px] font-semibold text-[#171923] bg-[#FFFFFF] border border-[#D8D7DE] hover:bg-[#F4F3F5] active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaveDisabled}
+                  className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-[12px] text-[13px] font-semibold transition-all min-h-[44px] shadow-xs select-none ${
+                    isSaveDisabled
+                      ? "bg-[#D8D7DE] text-[#777783] cursor-not-allowed shadow-none"
+                      : "bg-[#171923] text-white hover:bg-[#2D313E] active:scale-[0.98] cursor-pointer"
+                  }`}
+                >
+                  {isLoading && <Loader2 className="w-4 h-4 animate-spin text-[#B78AF2]" />}
+                  <span>Save changes</span>
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>
