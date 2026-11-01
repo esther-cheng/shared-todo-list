@@ -1,15 +1,12 @@
 "use client";
 
 import React from "react";
-import { Space } from "@/types";
+import { Space, FilterCounts } from "@/types";
+import { getSpaceIcon, getUserHighlightStyle } from "@/lib/colors";
 import { 
   LayoutGrid, 
   List, 
   Calendar as CalendarIcon, 
-  Heart, 
-  Home, 
-  Compass, 
-  CreditCard, 
   AtSign, 
   AlertCircle,
   Plus
@@ -24,17 +21,10 @@ interface SidebarProps {
   activeFilter: "all" | "tagged" | "radar";
   onSelectFilter: (filter: "all" | "tagged" | "radar") => void;
   currentUser: string;
-  taggedCount: number;
-  radarCount: number;
+  userColor?: string;
+  filterCounts: FilterCounts;
   onOpenCreateSpaceModal: () => void;
 }
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  heart: <Heart className="w-4 h-4 text-[#6B21A8]" />,
-  home: <Home className="w-4 h-4 text-[#C2410C]" />,
-  plane: <Compass className="w-4 h-4 text-[#0369A1]" />,
-  sparkles: <CreditCard className="w-4 h-4 text-[#065F46]" />,
-};
 
 export function Sidebar({
   currentView,
@@ -45,10 +35,11 @@ export function Sidebar({
   activeFilter,
   onSelectFilter,
   currentUser,
-  taggedCount,
-  radarCount,
+  userColor,
+  filterCounts,
   onOpenCreateSpaceModal,
 }: SidebarProps) {
+  const userHighlight = getUserHighlightStyle(userColor);
   return (
     <aside className="w-64 shrink-0 space-y-5">
       {/* View Switcher Panel */}
@@ -110,44 +101,47 @@ export function Sidebar({
           }`}
         >
           <span>All shared tasks</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#D8D7DE]/70 text-[#171923] font-bold">
+            {filterCounts.all}
+          </span>
         </button>
 
         <button
           onClick={() => onSelectFilter("tagged")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
             activeFilter === "tagged"
-              ? "bg-[#FDF2F8] text-[#9D174D] font-semibold border border-[#FBCFE8]"
+              ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
               : "text-[#171923] hover:bg-[#F4F3F5]"
           }`}
         >
           <div className="flex items-center gap-2">
-            <AtSign className="w-4 h-4 text-[#9D174D]" />
+            <AtSign className={`w-4 h-4 ${activeFilter === "tagged" ? userHighlight.textDark : "text-[#777783]"}`} />
             <span>Tagged for @{currentUser.toLowerCase()}</span>
           </div>
-          {taggedCount > 0 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FBCFE8] text-[#9D174D] font-bold">
-              {taggedCount}
-            </span>
-          )}
+          <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+            activeFilter === "tagged"
+              ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+              : "bg-[#D8D7DE]/70 text-[#171923]"
+          }`}>
+            {filterCounts.tagged}
+          </span>
         </button>
 
         <button
           onClick={() => onSelectFilter("radar")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
             activeFilter === "radar"
-              ? "bg-[#FFF0ED] text-[#C2410C] font-semibold border border-[#FED7CE]"
+              ? "bg-[#FFF0ED] text-[#C2410C] font-semibold border border-[#FF705B]"
               : "text-[#171923] hover:bg-[#F4F3F5]"
           }`}
         >
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-[#FF705B]" />
-            <span>Untouched radar</span>
+            <span>Action needed</span>
           </div>
-          {radarCount > 0 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FED7CE] text-[#C2410C] font-bold">
-              {radarCount}
-            </span>
-          )}
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FED7CE] text-[#C2410C] font-bold">
+            {filterCounts.radar}
+          </span>
         </button>
       </div>
 
@@ -170,32 +164,45 @@ export function Sidebar({
         <div className="space-y-1 mt-1">
           <button
             onClick={() => onSelectSpace("all")}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
               selectedSpaceId === "all"
                 ? "bg-[#F4F3F5] text-[#171923] font-semibold"
                 : "text-[#777783] hover:bg-[#F4F3F5] hover:text-[#171923]"
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-[#171923]" />
-            <span>All Spaces</span>
+            <div className="flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-[#171923]" />
+              <span>All Spaces</span>
+            </div>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#D8D7DE]/70 text-[#171923] font-bold">
+              {filterCounts.all}
+            </span>
           </button>
 
           {spaces.map((space) => {
             const isSelected = selectedSpaceId === space.id;
+            const count = filterCounts.spaces[space.id] ?? space.task_count ?? 0;
             return (
               <button
                 key={space.id}
                 onClick={() => onSelectSpace(space.id)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
                   isSelected
-                    ? "bg-[#F5EEFD] text-[#6B21A8] font-semibold border border-[#E5D4F9]"
+                    ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
                     : "text-[#171923] hover:bg-[#F4F3F5]"
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
-                  {ICON_MAP[space.icon] || <span className="w-2 h-2 rounded-full bg-[#B78AF2]" />}
+                  {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${userHighlight.textDark}` : "w-4 h-4 text-[#777783]")}
                   <span className="truncate">{space.name}</span>
                 </div>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                  isSelected
+                    ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+                    : "bg-[#D8D7DE]/70 text-[#777783]"
+                }`}>
+                  {count}
+                </span>
               </button>
             );
           })}

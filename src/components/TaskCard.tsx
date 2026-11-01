@@ -6,25 +6,27 @@ import {
   getSpaceColor, 
   formatDate, 
   formatRelativeDeadline, 
-  isTaskUntouched 
+  isTaskUntouched,
+  getUserHighlightStyle
 } from "@/lib/colors";
 import { 
   Calendar, 
   Clock, 
   MessageSquare, 
   Check, 
-  AlertCircle,
   ArrowUpRight
 } from "lucide-react";
 
 interface TaskCardProps {
   task: Task;
+  userColor?: string;
   onExpand: (task: Task) => void;
   onToggleStatus: (taskId: string, currentStatus: string) => void;
 }
 
-export function TaskCard({ task, onExpand, onToggleStatus }: TaskCardProps) {
+export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCardProps) {
   const spaceStyle = getSpaceColor(task.space_color);
+  const userHighlight = getUserHighlightStyle(userColor);
   const isDone = task.status === "completed";
   const untouched = isTaskUntouched(task);
 
@@ -34,7 +36,7 @@ export function TaskCard({ task, onExpand, onToggleStatus }: TaskCardProps) {
       className={`group relative bg-[#FFFFFF] border ${
         untouched
           ? "border-[#FED7CE] hover:border-[#FF705B]"
-          : "border-[#D8D7DE] hover:border-[#B78AF2]"
+          : "border-[#D8D7DE] hover:border-[var(--color-primary)]"
       } rounded-[18px] p-4 sm:p-5 transition-all duration-150 cursor-pointer shadow-[0_2px_10px_rgba(23,25,35,0.03)] hover:shadow-[0_4px_18px_rgba(23,25,35,0.06)] active:scale-[0.995]`}
     >
       {/* Top Meta: Space Pill + Author + Untouched Alert */}
@@ -52,9 +54,9 @@ export function TaskCard({ task, onExpand, onToggleStatus }: TaskCardProps) {
         </div>
 
         {untouched && (
-          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF0ED] text-[#C2410C] border border-[#FED7CE]">
+          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF0ED] text-[#C2410C] border border-[#FF705B]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#FF705B]" />
-            <span>Untouched • Action needed</span>
+            <span>Action needed</span>
           </div>
         )}
       </div>
@@ -114,10 +116,10 @@ export function TaskCard({ task, onExpand, onToggleStatus }: TaskCardProps) {
 
           {/* Lead-Time Duration & Recommended Start Window */}
           {task.lead_time_days > 0 && task.reminder_date && (
-            <div className="hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] bg-[#F5EEFD] text-[#6B21A8] font-medium border border-[#E5D4F9] tabular-numbers">
-              <Clock className="w-3.5 h-3.5 text-[#B78AF2]" />
+            <div className={`hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] ${userHighlight.bgLight} ${userHighlight.textDark} font-medium border ${userHighlight.border} tabular-numbers`}>
+              <Clock className={`w-3.5 h-3.5 ${userHighlight.textDark}`} />
               <span>
-                {task.lead_time_days >= 7 ? `${Math.round(task.lead_time_days / 7)}w` : `${task.lead_time_days}d`} lead time
+                {task.lead_time_days >= 7 ? `${Math.round(task.lead_time_days / 7)}w` : `${task.lead_time_days}d`} prep time
               </span>
               <span className="text-[#777783] font-normal">
                 • Start: {formatDate(task.reminder_date)}

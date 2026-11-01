@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Space } from "@/types";
-import { getSpaceColor } from "@/lib/colors";
-import { Heart, Home, Compass, CreditCard, Plus, AtSign } from "lucide-react";
+import { Space, FilterCounts } from "@/types";
+import { getSpaceColor, getSpaceIcon, getUserHighlightStyle } from "@/lib/colors";
+import { Plus, AtSign, AlertTriangle } from "lucide-react";
 
 interface MobileSpaceBarProps {
   spaces: Space[];
@@ -12,16 +12,10 @@ interface MobileSpaceBarProps {
   activeFilter: "all" | "tagged" | "radar";
   onSelectFilter: (filter: "all" | "tagged" | "radar") => void;
   currentUser: string;
-  taggedCount: number;
+  userColor?: string;
+  filterCounts: FilterCounts;
   onOpenCreateSpace: () => void;
 }
-
-const ICON_MAP: Record<string, React.ReactNode> = {
-  heart: <Heart className="w-3.5 h-3.5 text-[#6B21A8]" />,
-  home: <Home className="w-3.5 h-3.5 text-[#C2410C]" />,
-  plane: <Compass className="w-3.5 h-3.5 text-[#0369A1]" />,
-  sparkles: <CreditCard className="w-3.5 h-3.5 text-[#065F46]" />,
-};
 
 export function MobileSpaceBar({
   spaces,
@@ -30,9 +24,11 @@ export function MobileSpaceBar({
   activeFilter,
   onSelectFilter,
   currentUser,
-  taggedCount,
+  userColor,
+  filterCounts,
   onOpenCreateSpace,
 }: MobileSpaceBarProps) {
+  const userHighlight = getUserHighlightStyle(userColor);
   return (
     <div className="lg:hidden w-full overflow-x-auto no-scrollbar py-2.5 px-4 flex items-center gap-2 border-b border-[#D8D7DE] bg-[#FFFFFF]">
       {/* All Spaces */}
@@ -44,10 +40,19 @@ export function MobileSpaceBar({
         className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[38px] ${
           selectedSpaceId === "all" && activeFilter === "all"
             ? "bg-[#171923] text-white shadow-xs"
-            : "bg-[#F4F3F5] text-[#171923] hover:bg-[#E5D4F9]"
+            : "bg-[#F4F3F5] text-[#171923] hover:bg-[#EAE8ED]"
         }`}
       >
         <span>All spaces</span>
+        <span
+          className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            selectedSpaceId === "all" && activeFilter === "all"
+              ? "bg-white/20 text-white"
+              : "bg-[#D8D7DE] text-[#171923]"
+          }`}
+        >
+          {filterCounts.all}
+        </span>
       </button>
 
       {/* Tagged for current user */}
@@ -58,23 +63,53 @@ export function MobileSpaceBar({
         }}
         className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[38px] ${
           activeFilter === "tagged"
-            ? "bg-[#FDF2F8] border border-[#FBCFE8] text-[#9D174D]"
-            : "bg-[#F4F3F5] text-[#171923] hover:bg-[#E5D4F9]"
+            ? `${userHighlight.bgLight} border ${userHighlight.border} ${userHighlight.textDark}`
+            : "bg-[#F4F3F5] text-[#171923] hover:bg-[#EAE8ED]"
         }`}
       >
-        <AtSign className="w-3.5 h-3.5 text-[#9D174D]" />
+        <AtSign className={`w-3.5 h-3.5 ${activeFilter === "tagged" ? userHighlight.textDark : "text-[#777783]"}`} />
         <span>For @{currentUser.toLowerCase()}</span>
-        {taggedCount > 0 && (
-          <span className="w-4 h-4 rounded-full bg-[#FF705B] text-white text-[10px] flex items-center justify-center font-bold">
-            {taggedCount}
-          </span>
-        )}
+        <span
+          className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            activeFilter === "tagged"
+              ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+              : "bg-[#D8D7DE] text-[#171923]"
+          }`}
+        >
+          {filterCounts.tagged}
+        </span>
+      </button>
+
+      {/* Action needed (Radar) */}
+      <button
+        onClick={() => {
+          onSelectFilter(activeFilter === "radar" ? "all" : "radar");
+          onSelectSpace("all");
+        }}
+        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[38px] ${
+          activeFilter === "radar"
+            ? "bg-[#FFF0ED] border border-[#FF705B] text-[#C2410C]"
+            : "bg-[#F4F3F5] text-[#171923] hover:bg-[#EAE8ED]"
+        }`}
+      >
+        <AlertTriangle className="w-3.5 h-3.5 text-[#FF705B]" />
+        <span>Action needed</span>
+        <span
+          className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            activeFilter === "radar"
+              ? "bg-[#FF705B] text-white"
+              : "bg-[#FED7CE] text-[#C2410C]"
+          }`}
+        >
+          {filterCounts.radar}
+        </span>
       </button>
 
       {/* Each individual space */}
       {spaces.map((s) => {
         const isSelected = selectedSpaceId === s.id && activeFilter === "all";
         const color = getSpaceColor(s.color);
+        const count = filterCounts.spaces[s.id] ?? s.task_count ?? 0;
 
         return (
           <button
@@ -86,11 +121,20 @@ export function MobileSpaceBar({
             className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[38px] ${
               isSelected
                 ? `${color.badgeBg} ${color.badgeText} border ${color.badgeBorder} shadow-2xs`
-                : "bg-[#F4F3F5] text-[#171923] hover:bg-[#E5D4F9]"
+                : "bg-[#F4F3F5] text-[#171923] hover:bg-[#EAE8ED]"
             }`}
           >
-            {ICON_MAP[s.icon] || <span className="w-2 h-2 rounded-full bg-[#B78AF2]" />}
+            {getSpaceIcon(s.icon, "w-3.5 h-3.5")}
             <span>{s.name}</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                isSelected
+                  ? "bg-[#171923]/10 text-[#171923]"
+                  : "bg-[#D8D7DE] text-[#171923]"
+              }`}
+            >
+              {count}
+            </span>
           </button>
         );
       })}

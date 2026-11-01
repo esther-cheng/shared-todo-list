@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Task, Space, User } from "@/types";
+import { Task, Space, User, FilterCounts } from "@/types";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSpaceBar } from "@/components/MobileSpaceBar";
@@ -16,8 +16,8 @@ import { UntouchedRadar } from "@/components/UntouchedRadar";
 import { CalendarView } from "@/components/CalendarView";
 import { ListView } from "@/components/ListView";
 import { WelcomeView } from "@/components/WelcomeView";
-import { isTaskUntouched, isTaskTaggedForUser } from "@/lib/colors";
-import { Plus, Loader2, CheckSquare } from "lucide-react";
+import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
+import { Loader2, CheckSquare } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -25,6 +25,19 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+
+  const userColor = currentUser?.avatar_color || "purple";
+  const userHighlight = getUserHighlightStyle(userColor);
+
+  // Sync dynamic CSS variables to root based on user's color profile
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.style.setProperty("--color-primary", userHighlight.primaryHex);
+      document.documentElement.style.setProperty("--color-primary-light", userHighlight.lightHex);
+      document.documentElement.style.setProperty("--color-primary-text", userHighlight.textHex);
+      document.documentElement.style.setProperty("--color-primary-border", userHighlight.borderHex);
+    }
+  }, [userHighlight]);
 
   // Filters & State
   const [currentView, setCurrentView] = useState<"wall" | "list" | "calendar">("wall");
@@ -40,9 +53,18 @@ export default function HomePage() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
 
-  // Quick inline add
-  const [quickTitle, setQuickTitle] = useState("");
-  const [quickSpaceId, setQuickSpaceId] = useState("");
+  // Persistent stored filter counts
+  const [filterCounts, setFilterCounts] = useState<FilterCounts>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("tandem_filter_counts");
+        if (cached) return JSON.parse(cached);
+      } catch {
+        // ignore
+      }
+    }
+    return { all: 0, tagged: 0, radar: 0, spaces: {} };
+  });
 
   // Fetch current user session
   const fetchSession = useCallback(async () => {
@@ -74,9 +96,6 @@ export default function HomePage() {
 
       if (spacesData.spaces) {
         setSpaces(spacesData.spaces);
-        if (!quickSpaceId && spacesData.spaces.length > 0) {
-          setQuickSpaceId(spacesData.spaces[0].id);
-        }
       }
       if (tasksData.tasks) {
         setTasks(tasksData.tasks);
@@ -86,7 +105,7 @@ export default function HomePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [quickSpaceId]);
+  }, []);
 
   useEffect(() => {
     fetchSession();
@@ -285,22 +304,6 @@ export default function HomePage() {
     }
   };
 
-  // Quick wall post
-  const handleQuickAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTitle.trim() || !quickSpaceId) return;
-
-    await handleCreateTask({
-      title: quickTitle,
-      description: "",
-      space_id: quickSpaceId,
-      deadline: null,
-      lead_time_days: 0,
-      created_by: currentUser ? currentUser.name : "Alex",
-    });
-    setQuickTitle("");
-  };
-
   // Create space
   const handleCreateSpace = async (name: string, color: string, icon: string) => {
     try {
@@ -319,8 +322,6 @@ export default function HomePage() {
   };
 
   // Filter tasks based on search, space, and focus filter
-  const currentUsername = currentUser ? currentUser.username.toLowerCase() : "alex";
-
   const filteredTasks = tasks.filter((t) => {
     // Space filter
     if (selectedSpaceId !== "all" && t.space_id !== selectedSpaceId) {
@@ -348,10 +349,37 @@ export default function HomePage() {
     return true;
   });
 
-  const radarCount = tasks.filter((t) => isTaskUntouched(t)).length;
+  const radarCount = filterCounts.radar;
   const taggedTasks = tasks.filter((t) => isTaskTaggedForUser(t, currentUser));
   const activeTaggedTasks = taggedTasks.filter((t) => !dismissedTaskIds.includes(t.id));
   const activeTaggedCount = activeTaggedTasks.length;
+
+  // Store and synchronize filter task counts
+  useEffect(() => {
+    const counts: FilterCounts = {
+      all: tasks.length,
+      tagged: tasks.filter((t) => isTaskTaggedForUser(t, currentUser)).length,
+      radar: tasks.filter((t) => isTaskUntouched(t)).length,
+      spaces: {},
+    };
+
+    for (const s of spaces) {
+      counts.spaces[s.id] = 0;
+    }
+
+    for (const t of tasks) {
+      if (t.space_id) {
+        counts.spaces[t.space_id] = (counts.spaces[t.space_id] || 0) + 1;
+      }
+    }
+
+    setFilterCounts(counts);
+    try {
+      localStorage.setItem("tandem_filter_counts", JSON.stringify(counts));
+    } catch (e) {
+      console.error("Failed to store filter counts:", e);
+    }
+  }, [tasks, spaces, currentUser]);
 
   if (isAuthLoading) {
     return (
@@ -392,6 +420,7 @@ export default function HomePage() {
         onResetDismissed={handleResetDismissedNotifications}
         onSelectTask={handleExpandTask}
         taggedCount={activeTaggedCount}
+        userColor={userColor}
         onOpenTaggedFilter={() => {
           setActiveFilter("tagged");
           setSelectedSpaceId("all");
@@ -406,7 +435,8 @@ export default function HomePage() {
         activeFilter={activeFilter}
         onSelectFilter={setActiveFilter}
         currentUser={currentUser ? currentUser.username : "alex"}
-        taggedCount={activeTaggedCount}
+        userColor={userColor}
+        filterCounts={filterCounts}
         onOpenCreateSpace={() => setIsSpaceModalOpen(true)}
       />
 
@@ -424,56 +454,14 @@ export default function HomePage() {
               activeFilter={activeFilter}
               onSelectFilter={setActiveFilter}
               currentUser={currentUser ? currentUser.name : "Alex"}
-              taggedCount={activeTaggedCount}
-              radarCount={radarCount}
+              userColor={userColor}
+              filterCounts={filterCounts}
               onOpenCreateSpaceModal={() => setIsSpaceModalOpen(true)}
             />
           </div>
 
           {/* Center Main Stage */}
           <div className="flex-1 w-full min-w-0 space-y-4">
-            {/* Quick Add Post Box (Social Wall Style) */}
-            {currentView === "wall" && (
-              <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-3 sm:p-4 shadow-[0_2px_10px_rgba(23,25,35,0.02)] transition-all">
-                <form onSubmit={handleQuickAdd} className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={quickTitle}
-                    onChange={(e) => setQuickTitle(e.target.value)}
-                    placeholder={
-                      currentUser
-                        ? `Post as ${currentUser.name}...`
-                        : "Post a shared task to the wall..."
-                    }
-                    className="flex-1 text-[14px] px-3.5 py-2.5 rounded-[12px] bg-[#F4F3F5] border border-transparent focus:border-[#B78AF2] focus:bg-[#FFFFFF] focus:outline-none transition-all placeholder:text-[#777783] text-[#171923] min-h-[44px]"
-                  />
-
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={quickSpaceId}
-                      onChange={(e) => setQuickSpaceId(e.target.value)}
-                      className="text-[13px] font-medium px-3 py-2 rounded-[12px] bg-[#F4F3F5] border border-transparent focus:outline-none cursor-pointer text-[#171923] min-h-[44px] flex-1 sm:flex-none"
-                    >
-                      {spaces.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="submit"
-                      disabled={!quickTitle.trim()}
-                      className="min-h-[44px] px-5 rounded-[12px] text-xs font-semibold text-white bg-[#171923] hover:bg-[#2D313E] disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shadow-xs shrink-0"
-                    >
-                      <Plus className="w-4 h-4 stroke-[2.5]" />
-                      <span>Post</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
             {/* Filter Status Bar */}
             <div className="flex items-center justify-between gap-2 px-1 text-xs">
               <div className="flex items-center gap-2 flex-wrap">
@@ -483,7 +471,7 @@ export default function HomePage() {
                     : spaces.find((s) => s.id === selectedSpaceId)?.name}
                 </span>
                 {activeFilter !== "all" && (
-                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#F5EEFD] text-[#6B21A8] border border-[#E5D4F9]">
+                  <span className={`font-semibold px-2.5 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`}>
                     Filter: {activeFilter}
                   </span>
                 )}
@@ -513,7 +501,7 @@ export default function HomePage() {
                     <CheckSquare className="w-8 h-8 text-[#D8D7DE] mx-auto stroke-[1.5]" />
                     <p className="text-[15px] font-semibold text-[#171923]">No tasks found</p>
                     <p className="text-xs text-[#777783]">
-                      Post your first task using the input above or tap the + button.
+                      Create your first task using the + New Task button.
                     </p>
                   </div>
                 ) : (
@@ -521,6 +509,7 @@ export default function HomePage() {
                     <TaskCard
                       key={task.id}
                       task={task}
+                      userColor={userColor}
                       onExpand={handleExpandTask}
                       onToggleStatus={handleToggleStatus}
                     />
@@ -536,17 +525,11 @@ export default function HomePage() {
             ) : (
               <CalendarView
                 tasks={filteredTasks}
+                userColor={userColor}
                 onExpandTask={handleExpandTask}
+                onToggleStatus={handleToggleStatus}
               />
             )}
-          </div>
-
-          {/* Right Sidebar: Untouched Radar Window (Desktop only) */}
-          <div className="hidden lg:block w-80 shrink-0 space-y-6">
-            <UntouchedRadar
-              tasks={tasks}
-              onExpandTask={handleExpandTask}
-            />
           </div>
         </div>
       </main>
@@ -578,6 +561,8 @@ export default function HomePage() {
           task={expandedTask}
           spaces={spaces}
           currentUser={currentUser ? currentUser.name : "Alex"}
+          currentUsername={currentUser ? currentUser.username : "alex"}
+          userColor={currentUser?.avatar_color}
           onClose={() => setExpandedTask(null)}
           onUpdateTask={handleUpdateTask}
           onAddNote={handleAddNote}
@@ -590,6 +575,7 @@ export default function HomePage() {
         <CreateTaskModal
           spaces={spaces}
           currentUser={currentUser ? currentUser.name : "Alex"}
+          userColor={userColor}
           defaultSpaceId={selectedSpaceId !== "all" ? selectedSpaceId : undefined}
           onClose={() => setIsCreateModalOpen(false)}
           onCreateTask={handleCreateTask}

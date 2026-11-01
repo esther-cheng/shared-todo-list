@@ -79,47 +79,19 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
           <div className="w-10 h-10 rounded-[12px] bg-[#171923] text-white flex items-center justify-center font-display text-2xl font-bold shadow-xs select-none">
             T
           </div>
-          <div className="flex items-center gap-2.5">
-            <span className="font-display text-3xl sm:text-[32px] font-bold tracking-normal text-[#171923] leading-none">
-              Tandem
-            </span>
-            <span className="hidden sm:inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#EBF7F3] text-[#1E745A] border border-[#A8DCCB]">
-              Life&apos;s better in sync.
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setIsSignUp(false);
-              setError(null);
-            }}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-[8px] transition-colors ${
-              !isSignUp ? "text-[#171923] bg-[#F4F3F5]" : "text-[#777783] hover:text-[#171923]"
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => {
-              setIsSignUp(true);
-              setError(null);
-            }}
-            className="text-xs font-semibold px-3.5 py-1.5 rounded-[8px] bg-[#171923] text-white hover:bg-[#2D313E] transition-colors shadow-xs"
-          >
-            Create Account
-          </button>
+          <span className="font-display text-3xl sm:text-[32px] font-bold tracking-normal text-[#171923] leading-none">
+            Tandem
+          </span>
         </div>
       </header>
 
       {/* Hero & Authentication Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-14 flex flex-col justify-center">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-14 flex flex-col justify-start sm:justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Brand Story & Features */}
-          <div className="lg:col-span-7 space-y-6 sm:space-y-8">
-            <div className="space-y-3">
+          <div className="lg:col-span-7 sm:space-y-8">
+            <div className="space-y-1.5 sm:space-y-3">
               <h1 className="text-3xl sm:text-5xl font-bold text-[#171923] tracking-tight leading-[1.2]">
                 Welcome to{" "}
                 <span className="font-display font-normal text-4xl sm:text-6xl text-[#171923]">
@@ -127,13 +99,13 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 </span>
                 .
               </h1>
-              <p className="text-lg sm:text-xl text-[#777783] max-w-xl font-normal leading-relaxed">
+              <p className="text-base sm:text-xl text-[#777783] max-w-xl font-normal leading-relaxed">
                 Life&apos;s better in sync.
               </p>
             </div>
 
-            {/* Feature Highlights Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            {/* Feature Highlights Grid (hidden on mobile, visible on sm and up) */}
+            <div className="hidden sm:grid sm:grid-cols-2 gap-3.5 pt-1">
               <div className="bg-[#FFFFFF] p-4 rounded-[16px] border border-[#D8D7DE] shadow-xs space-y-1.5">
                 <div className="w-8 h-8 rounded-[8px] bg-[#F5EEFD] text-[#6B21A8] flex items-center justify-center">
                   <Users className="w-4 h-4" />
@@ -150,7 +122,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 </div>
                 <h3 className="text-[14px] font-semibold text-[#171923]">Long-Horizon Planning</h3>
                 <p className="text-[12px] text-[#777783] leading-normal">
-                  Set deadlines months or years out with built-in prep lead times.
+                  Set deadlines months or years out with built-in prep time.
                 </p>
               </div>
 
@@ -178,7 +150,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
 
           {/* Right Column: Direct Sign In / Sign Up Card */}
           <div className="lg:col-span-5 w-full">
-            <div className="bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_4px_24px_rgba(23,25,35,0.06)] p-6 sm:p-7 space-y-5">
+            <div className="bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_4px_24px_rgba(23,25,35,0.06)] p-5 sm:p-7 space-y-4 sm:space-y-5">
               
               {/* Card Header & Switcher */}
               <div className="space-y-3">

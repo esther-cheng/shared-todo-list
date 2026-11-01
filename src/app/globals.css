@@ -3,6 +3,9 @@
 :root {
   /* Chromatic Accents */
   --color-primary: #B78AF2;
+  --color-primary-light: #F5EEFD;
+  --color-primary-text: #6B21A8;
+  --color-primary-border: #E5D4F9;
   --color-coral: #FF705B;
   --color-mint: #A8DCCB;
   --color-sky: #BFEAF7;
@@ -98,7 +101,7 @@ body {
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B78AF2;
+  background: var(--color-primary);
 }
 
 /* Safe area support for iOS / mobile */
