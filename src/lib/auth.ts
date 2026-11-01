@@ -41,7 +41,7 @@ export async function getSessionUserFromToken(sessionId: string | null): Promise
 
   try {
     const result = await sql`
-      SELECT u.id, u.username, u.name, u.avatar_color, u.created_at
+      SELECT u.id, u.username, u.name, u.avatar_color, u.is_private, u.created_at
       FROM sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.id = ${sessionId} AND s.expires_at > NOW();

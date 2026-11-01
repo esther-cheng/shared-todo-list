@@ -25,11 +25,11 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { name, username, avatar_color, current_password, new_password } = body;
+    const { name, username, avatar_color, is_private, current_password, new_password } = body;
 
     // Fetch existing user with password_hash
     const existing = await sql`
-      SELECT id, username, name, password_hash, avatar_color 
+      SELECT id, username, name, password_hash, avatar_color, is_private 
       FROM users 
       WHERE id = ${user.id}
     `;
@@ -65,6 +65,8 @@ export async function PATCH(req: Request) {
       cleanAvatarColor = avatar_color.trim().toLowerCase();
     }
 
+    const cleanIsPrivate = typeof is_private === "boolean" ? is_private : currentRecord.is_private ?? false;
+
     let newPasswordHash = currentRecord.password_hash;
     const cleanNewPassword = typeof new_password === "string" ? new_password.trim() : "";
     if (cleanNewPassword) {
@@ -96,9 +98,10 @@ export async function PATCH(req: Request) {
         name = ${cleanName}, 
         username = ${cleanUsername}, 
         avatar_color = ${cleanAvatarColor}, 
+        is_private = ${cleanIsPrivate},
         password_hash = ${newPasswordHash}
       WHERE id = ${user.id}
-      RETURNING id, username, name, avatar_color, created_at;
+      RETURNING id, username, name, avatar_color, is_private, created_at;
     `;
 
     return NextResponse.json({ user: updated[0] });

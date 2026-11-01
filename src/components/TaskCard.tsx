@@ -33,11 +33,11 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
   return (
     <div
       onClick={() => onExpand(task)}
-      className={`group relative bg-[#FFFFFF] border ${
+      className={`group relative ${
         untouched
-          ? "border-[#FED7CE] hover:border-[#FF705B]"
-          : "border-[#D8D7DE] hover:border-[var(--color-primary)]"
-      } rounded-[18px] p-4 sm:p-5 transition-all duration-150 cursor-pointer shadow-[0_2px_10px_rgba(23,25,35,0.03)] hover:shadow-[0_4px_18px_rgba(23,25,35,0.06)] active:scale-[0.995]`}
+          ? "bg-[#FFF9F7] border-2 border-[#FF705B] shadow-[0_4px_20px_rgba(255,112,91,0.12)] hover:border-[#E0533E] hover:shadow-[0_6px_24px_rgba(255,112,91,0.18)]"
+          : "bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[var(--color-primary)] shadow-[0_2px_10px_rgba(23,25,35,0.03)] hover:shadow-[0_4px_18px_rgba(23,25,35,0.06)]"
+      } rounded-[18px] p-4 sm:p-5 transition-all duration-150 cursor-pointer active:scale-[0.995]`}
     >
       {/* Top Meta: Space Pill + Author + Untouched Alert */}
       <div className="flex items-center justify-between gap-2 mb-3">
@@ -54,8 +54,8 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
         </div>
 
         {untouched && (
-          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFF0ED] text-[#C2410C] border border-[#FF705B]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#FF705B]" />
+          <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#FF705B] text-white shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             <span>Action needed</span>
           </div>
         )}

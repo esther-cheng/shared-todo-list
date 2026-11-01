@@ -1,15 +1,19 @@
 "use client";
 
 import React from "react";
-import { Space, FilterCounts } from "@/types";
-import { getSpaceIcon, getUserHighlightStyle } from "@/lib/colors";
+import { Space, FilterCounts, SearchedUser } from "@/types";
+import { getSpaceIcon, getUserHighlightStyle, getUserAvatarStyle } from "@/lib/colors";
 import { 
   LayoutGrid, 
   List, 
   Calendar as CalendarIcon, 
   AtSign, 
   AlertCircle,
-  Plus
+  Plus,
+  Users,
+  UserPlus,
+  Check,
+  X
 } from "lucide-react";
 
 interface SidebarProps {
@@ -24,6 +28,13 @@ interface SidebarProps {
   userColor?: string;
   filterCounts: FilterCounts;
   onOpenCreateSpaceModal: () => void;
+  onOpenFriendsModal?: () => void;
+  onManageSpaceMembers?: (space: Space) => void;
+  friends?: SearchedUser[];
+  pendingRequestsCount?: number;
+  selectedFriend?: SearchedUser | null;
+  onSelectFriend?: (friend: SearchedUser | null) => void;
+  onQuickAddToSpace?: (user: SearchedUser, spaceId: string) => void;
 }
 
 export function Sidebar({
@@ -37,8 +48,16 @@ export function Sidebar({
   userColor,
   filterCounts,
   onOpenCreateSpaceModal,
+  onOpenFriendsModal = () => {},
+  onManageSpaceMembers,
+  friends = [],
+  pendingRequestsCount = 0,
+  selectedFriend = null,
+  onSelectFriend = () => {},
+  onQuickAddToSpace,
 }: SidebarProps) {
   const userHighlight = getUserHighlightStyle(userColor);
+  const activeSpace = selectedSpaceId !== "all" ? spaces.find((s) => s.id === selectedSpaceId) : null;
   return (
     <aside className="w-64 shrink-0 space-y-5">
       {/* View Switcher Panel */}
@@ -83,6 +102,126 @@ export function Sidebar({
             <span>Calendar view</span>
           </button>
         </div>
+      </div>
+
+      {/* Friends & People Interactive Hub */}
+      <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-2.5 shadow-[0_2px_10px_rgba(23,25,35,0.02)] space-y-1.5">
+        <div className="flex items-center justify-between px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase">
+              People & Friends
+            </span>
+            {pendingRequestsCount > 0 && (
+              <button
+                onClick={onOpenFriendsModal}
+                className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#FF705B] text-white animate-pulse cursor-pointer shadow-2xs"
+                title={`${pendingRequestsCount} incoming friend request${pendingRequestsCount === 1 ? "" : "s"}`}
+              >
+                {pendingRequestsCount} new
+              </button>
+            )}
+          </div>
+          <button
+            onClick={onOpenFriendsModal}
+            className="text-xs text-[#171923] font-semibold flex items-center gap-1 hover:text-[#6B21A8] transition-colors cursor-pointer"
+            title="Find new users and manage friends"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Find</span>
+          </button>
+        </div>
+
+        {friends.length === 0 ? (
+          <div className="p-3 text-center rounded-[12px] bg-[#F4F3F5]/60 border border-dashed border-[#D8D7DE] space-y-2">
+            <p className="text-[11px] text-[#777783] leading-relaxed">
+              Connect with your partner or friends to share spaces and assign tasks.
+            </p>
+            <button
+              onClick={onOpenFriendsModal}
+              className="w-full py-1.5 px-2.5 rounded-[9px] bg-[#171923] text-white text-[11px] font-semibold hover:bg-[#2D313E] transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1"
+            >
+              <UserPlus className="w-3 h-3" />
+              <span>Find people</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1 mt-0.5">
+            {friends.slice(0, 4).map((friend) => {
+              const isSelected = selectedFriend?.id === friend.id;
+              const avatarStyle = getUserAvatarStyle(friend.avatar_color);
+              const isInActiveSpace = activeSpace?.members?.some((m) => m.user_id === friend.id) ?? false;
+              const canQuickInvite = Boolean(activeSpace && !isInActiveSpace && onQuickAddToSpace);
+
+              return (
+                <div
+                  key={friend.id}
+                  className={`group w-full flex items-center justify-between px-2.5 py-2 rounded-[12px] text-[13px] font-medium transition-all cursor-pointer ${
+                    isSelected
+                      ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
+                      : "text-[#171923] hover:bg-[#F4F3F5]"
+                  }`}
+                  onClick={() => onSelectFriend(isSelected ? null : friend)}
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-1">
+                    <div className={`w-6 h-6 rounded-full ${avatarStyle.bg} ${avatarStyle.text} text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs select-none`}>
+                      {friend.name[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <span className="block truncate leading-tight font-semibold text-[13px]">
+                        {friend.name}
+                      </span>
+                      <span className="block text-[10px] text-[#777783] truncate leading-tight">
+                        @{friend.username}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* Quick Add to Active Space Action */}
+                    {canQuickInvite && (
+                      <button
+                        type="button"
+                        onClick={() => onQuickAddToSpace?.(friend, activeSpace!.id)}
+                        title={`Add ${friend.name} to ${activeSpace!.name}`}
+                        className="opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded-[7px] text-[10px] font-bold bg-[#171923] text-white hover:bg-[#2D313E] transition-all cursor-pointer shadow-2xs"
+                      >
+                        + Space
+                      </button>
+                    )}
+
+                    {/* Filter Status Indicator */}
+                    {isSelected ? (
+                      <button
+                        onClick={() => onSelectFriend(null)}
+                        title="Clear filter"
+                        className="p-1 rounded-full text-[#777783] hover:text-[#FF705B] cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <span 
+                        title={`Click to filter tasks with @${friend.username}`}
+                        className="text-[10px] text-[#777783] opacity-60 group-hover:opacity-100 group-hover:text-[#6B21A8] font-medium px-1.5"
+                      >
+                        Filter
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* View all friends link if more than 4 */}
+            {friends.length > 4 && (
+              <button
+                onClick={onOpenFriendsModal}
+                className="w-full text-center py-1 text-[11px] font-semibold text-[#777783] hover:text-[#171923] transition-colors cursor-pointer"
+              >
+                + {friends.length - 4} more friends
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Focus Filters (Mentions & Radar) */}
@@ -195,13 +334,27 @@ export function Sidebar({
                   {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${userHighlight.textDark}` : "w-4 h-4 text-[#777783]")}
                   <span className="truncate">{space.name}</span>
                 </div>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                  isSelected
-                    ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
-                    : "bg-[#D8D7DE]/70 text-[#777783]"
-                }`}>
-                  {count}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onManageSpaceMembers && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onManageSpaceMembers(space);
+                      }}
+                      title="Manage space members"
+                      className="p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-colors"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                    isSelected
+                      ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+                      : "bg-[#D8D7DE]/70 text-[#777783]"
+                  }`}>
+                    {count}
+                  </span>
+                </div>
               </button>
             );
           })}

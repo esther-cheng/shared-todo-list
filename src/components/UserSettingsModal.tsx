@@ -13,7 +13,8 @@ import {
   Loader2, 
   ShieldCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Globe
 } from "lucide-react";
 
 interface UserSettingsModalProps {
@@ -35,6 +36,7 @@ export function UserSettingsModal({
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [avatarColor, setAvatarColor] = useState(user.avatar_color || "purple");
+  const [isPrivate, setIsPrivate] = useState<boolean>(Boolean(user.is_private));
 
   // Security tab states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -57,7 +59,10 @@ export function UserSettingsModal({
   // Determine if the current active tab has changes and is valid to save
   let canSave = false;
   if (activeTab === "profile") {
-    const isProfileChanged = name.trim() !== user.name || cleanUsername !== user.username;
+    const isProfileChanged =
+      name.trim() !== user.name ||
+      cleanUsername !== user.username ||
+      isPrivate !== Boolean(user.is_private);
     const isProfileValid = name.trim().length > 0 && cleanUsername.length > 0;
     canSave = isProfileChanged && isProfileValid;
   } else if (activeTab === "color") {
@@ -82,7 +87,7 @@ export function UserSettingsModal({
     setError(null);
     setSuccessMessage(null);
 
-    const payload: Record<string, string> = {};
+    const payload: Record<string, string | boolean> = {};
 
     if (activeTab === "profile") {
       if (!name.trim()) {
@@ -95,6 +100,7 @@ export function UserSettingsModal({
       }
       payload.name = name.trim();
       payload.username = cleanUsername;
+      payload.is_private = isPrivate;
     } else if (activeTab === "color") {
       payload.avatar_color = avatarColor;
     } else if (activeTab === "security") {
@@ -133,6 +139,7 @@ export function UserSettingsModal({
       if (activeTab === "profile") {
         setName(data.user.name);
         setUsername(data.user.username);
+        setIsPrivate(Boolean(data.user.is_private));
         setSuccessMessage("Profile details saved successfully!");
       } else if (activeTab === "color") {
         setAvatarColor(data.user.avatar_color || "purple");
@@ -308,6 +315,59 @@ export function UserSettingsModal({
                   <p className="text-[11px] text-[#777783] mt-1.5">
                     Your unique tag for @mentions in notes and tasks.
                   </p>
+                </div>
+
+                {/* Account Privacy */}
+                <div className="pt-2 border-t border-[#D8D7DE]/70">
+                  <label className="block text-[13px] font-semibold text-[#171923] mb-1.5">
+                    Account Privacy
+                  </label>
+                  <p className="text-[11px] text-[#777783] mb-2.5">
+                    Choose whether other users need to be your friend before adding you to their spaces.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(false)}
+                      className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer ${
+                        !isPrivate
+                          ? "border-[#171923] bg-[#F4F3F5] ring-2 ring-[#171923] shadow-xs"
+                          : "border-[#D8D7DE] bg-[#FFFFFF] hover:border-[#B78AF2]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#171923]">
+                          <Globe className="w-3.5 h-3.5 text-[#065F46]" />
+                          Public Profile
+                        </span>
+                        {!isPrivate && <Check className="w-3.5 h-3.5 text-[#171923] stroke-[2.5]" />}
+                      </div>
+                      <p className="text-[11px] text-[#777783] leading-snug">
+                        Anyone can find you and add you directly to their spaces.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(true)}
+                      className={`p-3 rounded-[14px] border text-left transition-all cursor-pointer ${
+                        isPrivate
+                          ? "border-[#171923] bg-[#F4F3F5] ring-2 ring-[#171923] shadow-xs"
+                          : "border-[#D8D7DE] bg-[#FFFFFF] hover:border-[#B78AF2]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#171923]">
+                          <Lock className="w-3.5 h-3.5 text-[#6B21A8]" />
+                          Private Profile
+                        </span>
+                        {isPrivate && <Check className="w-3.5 h-3.5 text-[#171923] stroke-[2.5]" />}
+                      </div>
+                      <p className="text-[11px] text-[#777783] leading-snug">
+                        Only people you have accepted as friends can add you to their spaces.
+                      </p>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

@@ -6,7 +6,8 @@ import {
   getSpaceColor, 
   getSpaceIcon, 
   formatRelativeDeadline,
-  getUserHighlightStyle
+  getUserHighlightStyle,
+  isTaskUntouched
 } from "@/lib/colors";
 import { 
   ChevronLeft, 
@@ -913,6 +914,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                       dayTasks.map((task) => {
                         const spaceStyle = getSpaceColor(task.space_color);
                         const isDone = task.status === "completed";
+                        const untouched = isTaskUntouched(task);
 
                         return (
                           <div
@@ -921,8 +923,12 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                               e.stopPropagation();
                               onExpandTask(task);
                             }}
-                            className={`p-2 rounded-[10px] border transition-all hover:opacity-90 cursor-pointer ${spaceStyle.badgeBg} ${spaceStyle.badgeBorder}`}
-                            title={`${task.title} (${task.space_name || "General"})`}
+                            className={`p-2 rounded-[10px] transition-all hover:opacity-90 cursor-pointer ${
+                              untouched
+                                ? "border-2 border-[#FF705B] bg-[#FFF9F7] shadow-[0_2px_8px_rgba(255,112,91,0.18)]"
+                                : `border ${spaceStyle.badgeBg} ${spaceStyle.badgeBorder}`
+                            }`}
+                            title={`${task.title} (${task.space_name || "General"})${untouched ? " — Action needed" : ""}`}
                           >
                             <div className="flex items-center gap-1 mb-1">
                               {getSpaceIcon(task.space_icon, "w-3 h-3 opacity-70")}
@@ -1034,16 +1040,21 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                     <div className="hidden sm:block space-y-1">
                       {dayTasks.map((t) => {
                         const spaceStyle = getSpaceColor(t.space_color);
-                        return (
-                          <div
-                            key={t.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onExpandTask(t);
-                            }}
-                            className={`text-[10px] p-1 rounded-md border font-medium truncate cursor-pointer hover:opacity-90 ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
-                            title={`${t.title} (${t.space_name || "General"})`}
-                          >
+                          const isUntouched = isTaskUntouched(t);
+                          return (
+                            <div
+                              key={t.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onExpandTask(t);
+                              }}
+                              className={`text-[10px] p-1 rounded-md font-medium truncate cursor-pointer hover:opacity-90 ${
+                                isUntouched
+                                  ? "border-2 border-[#FF705B] bg-[#FFF9F7] text-[#C2410C] font-bold shadow-2xs"
+                                  : `border ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`
+                              }`}
+                              title={`${t.title} (${t.space_name || "General"})${isUntouched ? " — Action needed" : ""}`}
+                            >
                             {t.title}
                           </div>
                         );

@@ -3,7 +3,7 @@
 import React from "react";
 import { Task } from "@/types";
 import { getSpaceColor, formatDate, formatRelativeDeadline, isTaskUntouched } from "@/lib/colors";
-import { CheckCircle2, Circle, Clock, MessageSquare, AlertTriangle, ChevronRight } from "lucide-react";
+import { Check, Circle, Clock, MessageSquare, AlertTriangle, ChevronRight } from "lucide-react";
 
 interface ListViewProps {
   tasks: Task[];
@@ -14,16 +14,16 @@ interface ListViewProps {
 export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps) {
   if (tasks.length === 0) {
     return (
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-10 text-center text-[#777783]">
+      <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-10 text-center text-[#777783]">
         No tasks found matching your filter.
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-3xl shadow-xs overflow-hidden">
+    <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] shadow-[0_2px_10px_rgba(23,25,35,0.02)] overflow-hidden">
       {/* Mobile Streamlined Row List */}
-      <div className="sm:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+      <div className="sm:hidden divide-y divide-[#D8D7DE]/60 p-1">
         {tasks.map((task) => {
           const isDone = task.status === "completed";
           const spaceStyle = getSpaceColor(task.space_color);
@@ -33,7 +33,11 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
             <div
               key={task.id}
               onClick={() => onExpandTask(task)}
-              className="p-3.5 flex items-center justify-between gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer active:bg-zinc-100 transition-colors min-h-[56px]"
+              className={`p-3 flex items-center justify-between gap-3 cursor-pointer active:bg-[#F4F3F5] transition-all min-h-[56px] ${
+                untouched
+                  ? "bg-[#FFF9F7] border-2 border-[#FF705B] rounded-[14px] my-1 shadow-[0_2px_12px_rgba(255,112,91,0.12)]"
+                  : "hover:bg-[#F4F3F5]"
+              }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <button
@@ -41,14 +45,20 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                     e.stopPropagation();
                     onToggleStatus(task.id, task.status);
                   }}
-                  className="min-w-[40px] min-h-[40px] -m-2 flex items-center justify-center text-zinc-400 hover:text-[#6B21A8]"
+                  className="min-w-[40px] min-h-[40px] -m-2 flex items-center justify-center shrink-0"
                   aria-label="Toggle status"
                 >
-                  {isDone ? (
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-50" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-zinc-400" />
-                  )}
+                  <div
+                    className={`w-5 h-5 rounded-[7px] border flex items-center justify-center transition-all ${
+                      isDone
+                        ? "bg-[#171923] border-[#171923] text-white"
+                        : untouched
+                        ? "border-[#FF705B] bg-white"
+                        : "border-[#D8D7DE] bg-white hover:border-[#171923]"
+                    }`}
+                  >
+                    {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </div>
                 </button>
 
                 <div className="min-w-0">
@@ -59,14 +69,18 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                       {task.space_name}
                     </span>
                     {untouched && (
-                      <span className="text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-2 py-0.5 rounded-full border border-[#FF705B]">
-                        Action needed
+                      <span 
+                        title="Action needed: upcoming deadline / work window active"
+                        className="text-[9px] font-bold text-white bg-[#FF705B] px-1.5 py-0.2 rounded-full inline-flex items-center gap-0.5 shrink-0 shadow-2xs select-none"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 stroke-[2.5]" />
+                        <span>Action</span>
                       </span>
                     )}
                   </div>
                   <h4
-                    className={`text-xs font-semibold text-[#171923] dark:text-zinc-100 truncate ${
-                      isDone ? "line-through text-zinc-400" : ""
+                    className={`text-xs font-semibold text-[#171923] truncate ${
+                      isDone ? "line-through text-[#777783]" : ""
                     }`}
                   >
                     {task.title}
@@ -76,11 +90,11 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
 
               <div className="flex items-center gap-1.5 shrink-0 text-right">
                 {task.deadline && (
-                  <span className="text-[10px] text-[#777783] dark:text-zinc-400 font-medium">
+                  <span className={`text-[10px] font-medium ${untouched ? "text-[#C2410C] font-semibold" : "text-[#777783]"}`}>
                     {formatRelativeDeadline(task.deadline)}
                   </span>
                 )}
-                <ChevronRight className="w-4 h-4 text-zinc-400" />
+                <ChevronRight className="w-4 h-4 text-[#777783]" />
               </div>
             </div>
           );
@@ -89,19 +103,19 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
 
       {/* Desktop / Tablet Multi-Column Table */}
       <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-left text-xs">
+        <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-zinc-50 dark:bg-zinc-950/40 border-b border-zinc-200/80 dark:border-zinc-800 text-[#777783] dark:text-zinc-400 font-bold uppercase tracking-wider">
-              <th className="py-3 px-4 w-10"></th>
-              <th className="py-3 px-4">Task</th>
-              <th className="py-3 px-4">Space</th>
-              <th className="py-3 px-4">Target Deadline</th>
-              <th className="py-3 px-4">Prep Time</th>
-              <th className="py-3 px-4">Notes</th>
-              <th className="py-3 px-4">Author</th>
+            <tr className="bg-[#F4F3F5] border-b border-[#D8D7DE] text-[#777783] text-[11px] font-bold uppercase tracking-wider select-none">
+              <th className="py-2.5 px-3 w-10 text-center"></th>
+              <th className="py-2.5 px-3 min-w-[220px]">Task</th>
+              <th className="py-2.5 px-3">Space</th>
+              <th className="py-2.5 px-3">Target Deadline</th>
+              <th className="py-2.5 px-3">Prep Time</th>
+              <th className="py-2.5 px-3">Notes</th>
+              <th className="py-2.5 px-3">Author</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+          <tbody className="divide-y divide-[#D8D7DE]/60">
             {tasks.map((task) => {
               const isDone = task.status === "completed";
               const spaceStyle = getSpaceColor(task.space_color);
@@ -111,81 +125,106 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                 <tr
                   key={task.id}
                   onClick={() => onExpandTask(task)}
-                  className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors ${
-                    untouched ? "bg-amber-50/30 dark:bg-amber-950/10" : ""
+                  className={`group cursor-pointer transition-colors relative ${
+                    untouched
+                      ? "bg-[#FFF9F7] hover:bg-[#FFF2EE]"
+                      : "hover:bg-[#F4F3F5] text-[#171923]"
                   }`}
                 >
-                  <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                  {/* Column 1: Checkbox + Left Border Accent */}
+                  <td 
+                    className={`py-3 px-3 text-center ${
+                      untouched ? "border-y-2 border-l-4 border-y-[#FF705B] border-l-[#FF705B]" : ""
+                    }`} 
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       onClick={() => onToggleStatus(task.id, task.status)}
-                      className="text-zinc-400 hover:text-purple-600 transition-colors"
+                      className="inline-flex items-center justify-center min-w-[28px] min-h-[28px] transition-colors"
+                      aria-label="Toggle status"
                     >
-                      {isDone ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-100" />
-                      ) : (
-                        <Circle className="w-4 h-4" />
-                      )}
+                      <div
+                        className={`w-4 h-4 rounded-[6px] border flex items-center justify-center transition-all ${
+                          isDone
+                            ? "bg-[#171923] border-[#171923] text-white"
+                            : untouched
+                            ? "border-[#FF705B] bg-white hover:border-[#171923]"
+                            : "border-[#D8D7DE] bg-white hover:border-[#171923]"
+                        }`}
+                      >
+                        {isDone && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
                     </button>
                   </td>
 
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
+                  {/* Column 2: Task Title + Space-Saving Action Badge */}
+                  <td className={`py-3 px-3 ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {untouched && (
+                        <span
+                          title="Action needed: reminder window open or deadline nearing"
+                          aria-label="Action needed"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#FF705B] text-white text-[10px] font-bold shrink-0 shadow-2xs select-none"
+                        >
+                          <AlertTriangle className="w-2.5 h-2.5 stroke-[2.5]" />
+                          <span className="hidden xl:inline text-[9px] uppercase tracking-wider">Action</span>
+                        </span>
+                      )}
                       <span
-                        className={`font-semibold text-zinc-900 dark:text-zinc-100 ${
-                          isDone ? "line-through text-zinc-400" : ""
+                        className={`font-semibold text-[#171923] truncate ${
+                          isDone ? "line-through text-[#777783]" : ""
                         }`}
                       >
                         {task.title}
                       </span>
-                      {untouched && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-2 py-0.5 rounded-full border border-[#FF705B]">
-                          <AlertTriangle className="w-3 h-3 text-[#FF705B]" />
-                          Action needed
-                        </span>
-                      )}
                     </div>
                   </td>
 
-                  <td className="py-3.5 px-4">
+                  {/* Column 3: Space Badge */}
+                  <td className={`py-3 px-3 ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border truncate max-w-[140px] ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
                     >
                       {task.space_name}
                     </span>
                   </td>
 
-                  <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-300 font-medium">
+                  {/* Column 4: Target Deadline */}
+                  <td className={`py-3 px-3 text-[#171923] font-medium ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
                     {task.deadline ? (
-                      <div>
-                        <span>{formatDate(task.deadline)}</span>
-                        <span className="block text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">
+                      <div className="leading-tight">
+                        <span className="block font-semibold">{formatDate(task.deadline)}</span>
+                        <span className={`block text-[10px] ${untouched ? "text-[#C2410C] font-bold" : "text-[#777783]"}`}>
                           {formatRelativeDeadline(task.deadline)}
                         </span>
                       </div>
                     ) : (
-                      "—"
+                      <span className="text-[#777783]">—</span>
                     )}
                   </td>
 
-                  <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-300">
+                  {/* Column 5: Prep Time */}
+                  <td className={`py-3 px-3 text-[#777783] ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
                     {task.lead_time_days > 0 ? (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-purple-500" />
-                        {task.lead_time_days} days
+                      <span className="inline-flex items-center gap-1 font-medium text-[#171923]">
+                        <Clock className="w-3.5 h-3.5 text-[#B78AF2]" />
+                        <span>{task.lead_time_days}d</span>
                       </span>
                     ) : (
                       "—"
                     )}
                   </td>
 
-                  <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400">
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      {task.notes_count || 0}
+                  {/* Column 6: Notes Count */}
+                  <td className={`py-3 px-3 text-[#777783] ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#777783]" />
+                      <span>{task.notes_count || 0}</span>
                     </span>
                   </td>
 
-                  <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 font-medium">
+                  {/* Column 7: Author + Right Border Accent */}
+                  <td className={`py-3 px-3 text-[#777783] font-medium ${untouched ? "border-y-2 border-r-2 border-y-[#FF705B] border-r-[#FF705B]" : ""}`}>
                     {task.created_by}
                   </td>
                 </tr>

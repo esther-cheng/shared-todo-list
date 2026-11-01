@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     const taggedUser = searchParams.get("taggedUser");
     const radar = searchParams.get("radar");
 
+    const params: (string | number)[] = [user.id];
     let query = `
       SELECT 
         t.id,
@@ -53,10 +54,12 @@ export async function GET(req: Request) {
       FROM tasks t
       LEFT JOIN spaces s ON t.space_id = s.id
       LEFT JOIN task_notes n ON t.id = n.task_id
-      WHERE 1=1
+      WHERE (
+        s.created_by = $1 OR
+        EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = t.space_id AND sm.user_id = $1) OR
+        NOT EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = t.space_id)
+      )
     `;
-
-    const params: (string | number)[] = [];
 
     if (spaceId && spaceId !== "all") {
       params.push(spaceId);

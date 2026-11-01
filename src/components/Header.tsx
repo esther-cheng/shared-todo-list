@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { User as UserType, Task } from "@/types";
-import { Search, Plus, Bell, LogIn, LogOut, X, Settings, ChevronDown } from "lucide-react";
+import { User as UserType, Task, SearchedUser } from "@/types";
+import { Search, Plus, Bell, LogIn, LogOut, X, Settings, ChevronDown, Users } from "lucide-react";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { SearchDropdown } from "@/components/SearchDropdown";
 import { getUserAvatarStyle } from "@/lib/colors";
 
 interface HeaderProps {
@@ -14,12 +15,15 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenCreateModal: () => void;
   onOpenSettings?: () => void;
+  onOpenFriends?: () => void;
+  tasks?: Task[];
   taggedTasks?: Task[];
   dismissedTaskIds?: string[];
   onDismissTask?: (taskId: string) => void;
   onDismissAll?: () => void;
   onResetDismissed?: () => void;
   onSelectTask?: (task: Task) => void;
+  onSelectUser?: (user: SearchedUser) => void;
   taggedCount?: number;
   userColor?: string;
   onOpenTaggedFilter: () => void;
@@ -33,22 +37,28 @@ export function Header({
   onLogout,
   onOpenCreateModal,
   onOpenSettings = () => {},
+  onOpenFriends = () => {},
+  tasks = [],
   taggedTasks = [],
   dismissedTaskIds = [],
   onDismissTask = () => {},
   onDismissAll = () => {},
   onResetDismissed = () => {},
   onSelectTask = () => {},
+  onSelectUser = () => {},
   taggedCount,
   onOpenTaggedFilter,
 }: HeaderProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Click outside and escape key handling for both dropdowns
+  // Click outside and escape key handling for all dropdowns
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -58,15 +68,23 @@ export function Header({
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setIsUserMenuOpen(false);
       }
+      if (
+        searchContainerRef.current && 
+        !searchContainerRef.current.contains(target) &&
+        (!mobileSearchContainerRef.current || !mobileSearchContainerRef.current.contains(target))
+      ) {
+        setIsSearchOpen(false);
+      }
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setIsNotificationsOpen(false);
         setIsUserMenuOpen(false);
+        setIsSearchOpen(false);
       }
     };
 
-    if (isNotificationsOpen || isUserMenuOpen) {
+    if (isNotificationsOpen || isUserMenuOpen || isSearchOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       window.addEventListener("keydown", handleKeyDown);
     }
@@ -74,7 +92,7 @@ export function Header({
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isNotificationsOpen, isUserMenuOpen]);
+  }, [isNotificationsOpen, isUserMenuOpen, isSearchOpen]);
 
   // Compute active notification count
   const activeTaggedTasks = taggedTasks.filter((t) => !dismissedTaskIds.includes(t.id));
@@ -103,15 +121,34 @@ export function Header({
         </div>
 
         {/* Global Search - Desktop */}
-        <div className="flex-1 max-w-md hidden md:block">
+        <div className="flex-1 max-w-md hidden md:block" ref={searchContainerRef}>
           <div className="relative">
             <Search className="w-4 h-4 text-[#777783] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search tasks, context, @mentions..."
+              onFocus={() => setIsSearchOpen(true)}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              placeholder="Search tasks, context, @mentions, users..."
               className="w-full pl-9 pr-4 py-2 rounded-[12px] text-[14px] bg-[#F4F3F5] border border-transparent focus:border-[var(--color-primary)] focus:bg-[#FFFFFF] focus:outline-none transition-all placeholder:text-[#777783] text-[#171923]"
+            />
+
+            {/* Dropdown sorted into Tasks, Mentions, Users */}
+            <SearchDropdown
+              query={searchQuery}
+              tasks={tasks}
+              currentUser={currentUser}
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              onSelectTask={onSelectTask}
+              onSelectUser={onSelectUser}
+              onFilterByMention={(mention) => {
+                onSearchChange(mention);
+                setIsSearchOpen(false);
+              }}
             />
           </div>
         </div>
@@ -126,6 +163,19 @@ export function Header({
           >
             {isMobileSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
           </button>
+
+          {/* Friends & People Button */}
+          {currentUser && (
+            <button
+              type="button"
+              onClick={onOpenFriends}
+              className="p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer select-none"
+              title="Friends & People"
+              aria-label="Friends & People"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Notifications Dropdown */}
           <div className="relative" ref={notificationRef}>
@@ -236,6 +286,20 @@ export function Header({
 
                   {/* Options */}
                   <div className="space-y-0.5">
+                    {/* Friends & People */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        onOpenFriends();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium text-[#171923] hover:bg-[#F4F3F5] rounded-[10px] transition-colors group cursor-pointer text-left"
+                      role="menuitem"
+                    >
+                      <Users className="w-4 h-4 text-[#777783] group-hover:text-[#171923] transition-colors shrink-0" />
+                      <span>Friends & people</span>
+                    </button>
+
                     {/* User Settings */}
                     <button
                       type="button"
@@ -281,16 +345,35 @@ export function Header({
 
       {/* Mobile Expandable Search Bar */}
       {isMobileSearchOpen && (
-        <div className="md:hidden mt-2.5 pt-2.5 border-t border-[#D8D7DE]/60">
+        <div className="md:hidden mt-2.5 pt-2.5 border-t border-[#D8D7DE]/60" ref={mobileSearchContainerRef}>
           <div className="relative">
             <Search className="w-4 h-4 text-[#777783] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               autoFocus
               value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search tasks, descriptions, @mentions..."
+              onFocus={() => setIsSearchOpen(true)}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              placeholder="Search tasks, descriptions, @mentions, users..."
               className="w-full pl-9 pr-4 py-2.5 rounded-[12px] text-xs bg-[#F4F3F5] border border-transparent focus:border-[var(--color-primary)] focus:bg-[#FFFFFF] focus:outline-none text-[#171923]"
+            />
+
+            {/* Dropdown on mobile */}
+            <SearchDropdown
+              query={searchQuery}
+              tasks={tasks}
+              currentUser={currentUser}
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              onSelectTask={onSelectTask}
+              onSelectUser={onSelectUser}
+              onFilterByMention={(mention) => {
+                onSearchChange(mention);
+                setIsSearchOpen(false);
+              }}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Task, Space, User, FilterCounts } from "@/types";
+import { Task, Space, User, FilterCounts, SearchedUser, FriendsData } from "@/types";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSpaceBar } from "@/components/MobileSpaceBar";
@@ -16,8 +16,10 @@ import { UntouchedRadar } from "@/components/UntouchedRadar";
 import { CalendarView } from "@/components/CalendarView";
 import { ListView } from "@/components/ListView";
 import { WelcomeView } from "@/components/WelcomeView";
+import { FriendsModal } from "@/components/FriendsModal";
+import { SpaceMembersModal } from "@/components/SpaceMembersModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
-import { Loader2, CheckSquare } from "lucide-react";
+import { Loader2, CheckSquare, Users, X } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -43,7 +45,13 @@ export default function HomePage() {
   const [currentView, setCurrentView] = useState<"wall" | "list" | "calendar">("wall");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("all");
   const [activeFilter, setActiveFilter] = useState<"all" | "tagged" | "radar">("all");
+  const [selectedFriend, setSelectedFriend] = useState<SearchedUser | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [friendsData, setFriendsData] = useState<FriendsData>({
+    friends: [],
+    pending_incoming: [],
+    pending_outgoing: [],
+  });
 
   // Modals
   const [expandedTask, setExpandedTask] = useState<Task | null>(null);
@@ -51,6 +59,8 @@ export default function HomePage() {
   const [isSpaceModalOpen, setIsSpaceModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
+  const [selectedSpaceForMembers, setSelectedSpaceForMembers] = useState<Space | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
 
   // Persistent stored filter counts
@@ -87,18 +97,27 @@ export default function HomePage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [spacesRes, tasksRes] = await Promise.all([
+      const [spacesRes, tasksRes, friendsRes] = await Promise.all([
         fetch("/api/spaces"),
         fetch("/api/tasks"),
+        fetch("/api/friends"),
       ]);
       const spacesData = await spacesRes.json();
       const tasksData = await tasksRes.json();
+      const friendsDataRes = await friendsRes.json();
 
       if (spacesData.spaces) {
         setSpaces(spacesData.spaces);
       }
       if (tasksData.tasks) {
         setTasks(tasksData.tasks);
+      }
+      if (friendsDataRes.friends) {
+        setFriendsData({
+          friends: friendsDataRes.friends || [],
+          pending_incoming: friendsDataRes.pending_incoming || [],
+          pending_outgoing: friendsDataRes.pending_outgoing || [],
+        });
       }
     } catch (err) {
       console.error("Failed to load data:", err);
@@ -305,19 +324,45 @@ export default function HomePage() {
   };
 
   // Create space
-  const handleCreateSpace = async (name: string, color: string, icon: string) => {
+  const handleCreateSpace = async (
+    name: string,
+    color: string,
+    icon: string,
+    memberIds?: string[]
+  ) => {
     try {
       const res = await fetch("/api/spaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color, icon }),
+        body: JSON.stringify({ name, color, icon, member_ids: memberIds }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create space");
+      }
       if (data.space) {
         setSpaces((prev) => [...prev, data.space]);
+        setSelectedSpaceId(data.space.id);
       }
     } catch (err) {
       console.error("Failed to create space:", err);
+      throw err;
+    }
+  };
+
+  // Quick add friend to active space from sidebar
+  const handleQuickAddToSpace = async (user: SearchedUser, spaceId: string) => {
+    try {
+      const res = await fetch(`/api/spaces/${spaceId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: user.id }),
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to quick add friend to space:", err);
     }
   };
 
@@ -326,6 +371,15 @@ export default function HomePage() {
     // Space filter
     if (selectedSpaceId !== "all" && t.space_id !== selectedSpaceId) {
       return false;
+    }
+
+    // Friend filter
+    if (selectedFriend) {
+      const isTagged = isTaskTaggedForUser(t, selectedFriend.username);
+      const authorMatch =
+        (t.created_by || "").toLowerCase() === selectedFriend.name.toLowerCase() ||
+        (t.created_by || "").toLowerCase() === selectedFriend.username.toLowerCase();
+      if (!isTagged && !authorMatch) return false;
     }
 
     // Search query
@@ -413,6 +467,9 @@ export default function HomePage() {
         onLogout={handleLogout}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenFriends={() => setIsFriendsModalOpen(true)}
+        tasks={tasks}
+        onSelectUser={() => setIsFriendsModalOpen(true)}
         taggedTasks={taggedTasks}
         dismissedTaskIds={dismissedTaskIds}
         onDismissTask={handleDismissNotification}
@@ -457,6 +514,13 @@ export default function HomePage() {
               userColor={userColor}
               filterCounts={filterCounts}
               onOpenCreateSpaceModal={() => setIsSpaceModalOpen(true)}
+              onOpenFriendsModal={() => setIsFriendsModalOpen(true)}
+              onManageSpaceMembers={(sp) => setSelectedSpaceForMembers(sp)}
+              friends={friendsData.friends}
+              pendingRequestsCount={friendsData.pending_incoming.length}
+              selectedFriend={selectedFriend}
+              onSelectFriend={setSelectedFriend}
+              onQuickAddToSpace={handleQuickAddToSpace}
             />
           </div>
 
@@ -470,9 +534,44 @@ export default function HomePage() {
                     ? "All spaces"
                     : spaces.find((s) => s.id === selectedSpaceId)?.name}
                 </span>
+
+                {/* Specific space members manage button */}
+                {selectedSpaceId !== "all" && (() => {
+                  const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
+                  if (!currentSpace) return null;
+                  const memberCount = currentSpace.members?.length ?? currentSpace.member_count ?? 1;
+                  return (
+                    <button
+                      onClick={() => setSelectedSpaceForMembers(currentSpace)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] text-xs font-semibold text-[#171923] transition-all cursor-pointer shadow-xs"
+                      title="Manage space members"
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#171923]" />
+                      <span>
+                        {memberCount} {memberCount === 1 ? "member" : "members"}
+                      </span>
+                      <span className="text-[#6B21A8] font-bold ml-0.5">+ Add people</span>
+                    </button>
+                  );
+                })()}
+
                 {activeFilter !== "all" && (
                   <span className={`font-semibold px-2.5 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`}>
                     Filter: {activeFilter === "tagged" ? "Tagged for you" : activeFilter === "radar" ? "Action needed" : activeFilter}
+                  </span>
+                )}
+
+                {/* Friend Filter Badge */}
+                {selectedFriend && (
+                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#EFF8F5] text-[#065F46] border border-[#CCEBE1] inline-flex items-center gap-1.5 shadow-2xs">
+                    <span>With @{selectedFriend.username}</span>
+                    <button
+                      onClick={() => setSelectedFriend(null)}
+                      className="hover:text-[#FF705B] cursor-pointer"
+                      title="Clear friend filter"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </span>
                 )}
                 <span className="text-[#777783] font-normal">
@@ -598,6 +697,29 @@ export default function HomePage() {
           onUpdateUser={(updatedUser) => {
             setCurrentUser(updatedUser);
             fetchData();
+          }}
+        />
+      )}
+
+      {/* Friends & People Modal */}
+      {isFriendsModalOpen && currentUser && (
+        <FriendsModal
+          currentUser={currentUser}
+          onClose={() => setIsFriendsModalOpen(false)}
+          onFriendsChanged={fetchData}
+        />
+      )}
+
+      {/* Space Members Modal */}
+      {selectedSpaceForMembers && currentUser && (
+        <SpaceMembersModal
+          space={selectedSpaceForMembers}
+          currentUser={currentUser}
+          onClose={() => setSelectedSpaceForMembers(null)}
+          onMembersUpdated={fetchData}
+          onOpenFriendsModal={() => {
+            setSelectedSpaceForMembers(null);
+            setIsFriendsModalOpen(true);
           }}
         />
       )}

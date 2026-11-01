@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, name, password, avatar_color = "purple" } = body;
+    const { username, name, password, avatar_color = "purple", is_private = false } = body;
 
     if (!username || !username.trim()) {
       return NextResponse.json({ error: "Username is required" }, { status: 400 });
@@ -36,9 +36,9 @@ export async function POST(req: Request) {
     const userId = "user-" + crypto.randomUUID();
 
     const insertResult = await sql`
-      INSERT INTO users (id, username, name, password_hash, avatar_color)
-      VALUES (${userId}, ${cleanUsername}, ${cleanName}, ${passwordHash}, ${avatar_color})
-      RETURNING id, username, name, avatar_color, created_at;
+      INSERT INTO users (id, username, name, password_hash, avatar_color, is_private)
+      VALUES (${userId}, ${cleanUsername}, ${cleanName}, ${passwordHash}, ${avatar_color}, ${Boolean(is_private)})
+      RETURNING id, username, name, avatar_color, is_private, created_at;
     `;
 
     const user = insertResult[0];

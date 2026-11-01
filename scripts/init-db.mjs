@@ -41,6 +41,7 @@ async function main() {
       name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       avatar_color TEXT DEFAULT 'purple',
+      is_private BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `;
@@ -63,10 +64,34 @@ async function main() {
       slug TEXT UNIQUE NOT NULL,
       color TEXT NOT NULL,
       icon TEXT NOT NULL,
+      created_by TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `;
   console.log("✓ Spaces table ready");
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS friendships (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      friend_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'accepted',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT unique_user_friend UNIQUE (user_id, friend_id)
+    );
+  `;
+  console.log("✓ Friendships table ready");
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS space_members (
+      space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'member',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (space_id, user_id)
+    );
+  `;
+  console.log("✓ Space members table ready");
 
   await sql`
     CREATE TABLE IF NOT EXISTS tasks (

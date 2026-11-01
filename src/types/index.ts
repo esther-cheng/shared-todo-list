@@ -3,7 +3,18 @@ export interface User {
   username: string;
   name: string;
   avatar_color: string;
+  is_private?: boolean;
   created_at: string;
+}
+
+export interface SpaceMember {
+  user_id: string;
+  username: string;
+  name: string;
+  avatar_color: string;
+  role: "owner" | "member";
+  is_private?: boolean;
+  created_at?: string;
 }
 
 export interface Space {
@@ -12,8 +23,27 @@ export interface Space {
   slug: string;
   color: string;
   icon: string;
+  created_by?: string;
   created_at: string;
   task_count?: number;
+  members?: SpaceMember[];
+  member_count?: number;
+}
+
+export interface SearchedUser {
+  id: string;
+  username: string;
+  name: string;
+  avatar_color: string;
+  is_private: boolean;
+  friendship_status: "none" | "friends" | "pending_sent" | "pending_received";
+  can_add_to_space: boolean;
+}
+
+export interface FriendsData {
+  friends: SearchedUser[];
+  pending_incoming: SearchedUser[];
+  pending_outgoing: SearchedUser[];
 }
 
 export interface FilterCounts {
