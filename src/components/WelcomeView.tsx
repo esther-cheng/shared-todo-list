@@ -4,13 +4,11 @@ import React, { useState } from "react";
 import { User } from "@/types";
 import { 
   Users, 
-  Calendar, 
   Clock, 
   MessageSquare, 
   CheckCircle2, 
   ArrowRight, 
   Loader2,
-  Sparkles,
   ShieldCheck,
   Eye,
   EyeOff
@@ -73,34 +71,6 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
     }
   };
 
-  const handleQuickDemo = async (demoUser: "alex" | "taylor") => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: demoUser,
-          password: "password123",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || "Failed to sign in demo user");
-      }
-      onLoginSuccess(data.user);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Demo sign in failed");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#F4F3F5] text-[#171923] flex flex-col font-sans selection:bg-[#B78AF2]/30">
       {/* Top Welcome Bar */}
@@ -109,47 +79,19 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
           <div className="w-10 h-10 rounded-[12px] bg-[#171923] text-white flex items-center justify-center font-display text-2xl font-bold shadow-xs select-none">
             T
           </div>
-          <div className="flex items-center gap-2.5">
-            <span className="font-display text-3xl sm:text-[32px] font-bold tracking-normal text-[#171923] leading-none">
-              Tandem
-            </span>
-            <span className="hidden sm:inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#EBF7F3] text-[#1E745A] border border-[#A8DCCB]">
-              Life&apos;s better in sync.
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setIsSignUp(false);
-              setError(null);
-            }}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-[8px] transition-colors ${
-              !isSignUp ? "text-[#171923] bg-[#F4F3F5]" : "text-[#777783] hover:text-[#171923]"
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => {
-              setIsSignUp(true);
-              setError(null);
-            }}
-            className="text-xs font-semibold px-3.5 py-1.5 rounded-[8px] bg-[#171923] text-white hover:bg-[#2D313E] transition-colors shadow-xs"
-          >
-            Create Account
-          </button>
+          <span className="font-display text-3xl sm:text-[32px] font-bold tracking-normal text-[#171923] leading-none">
+            Tandem
+          </span>
         </div>
       </header>
 
       {/* Hero & Authentication Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-14 flex flex-col justify-center">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-14 flex flex-col justify-start sm:justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8 lg:gap-12 items-center">
           
           {/* Left Column: Brand Story & Features */}
-          <div className="lg:col-span-7 space-y-6 sm:space-y-8">
-            <div className="space-y-3">
+          <div className="lg:col-span-7 sm:space-y-8">
+            <div className="space-y-1.5 sm:space-y-3">
               <h1 className="text-3xl sm:text-5xl font-bold text-[#171923] tracking-tight leading-[1.2]">
                 Welcome to{" "}
                 <span className="font-display font-normal text-4xl sm:text-6xl text-[#171923]">
@@ -157,13 +99,13 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 </span>
                 .
               </h1>
-              <p className="text-lg sm:text-xl text-[#777783] max-w-xl font-normal leading-relaxed">
+              <p className="text-base sm:text-xl text-[#777783] max-w-xl font-normal leading-relaxed">
                 Life&apos;s better in sync.
               </p>
             </div>
 
-            {/* Feature Highlights Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            {/* Feature Highlights Grid (hidden on mobile, visible on sm and up) */}
+            <div className="hidden sm:grid sm:grid-cols-2 gap-3.5 pt-1">
               <div className="bg-[#FFFFFF] p-4 rounded-[16px] border border-[#D8D7DE] shadow-xs space-y-1.5">
                 <div className="w-8 h-8 rounded-[8px] bg-[#F5EEFD] text-[#6B21A8] flex items-center justify-center">
                   <Users className="w-4 h-4" />
@@ -180,7 +122,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 </div>
                 <h3 className="text-[14px] font-semibold text-[#171923]">Long-Horizon Planning</h3>
                 <p className="text-[12px] text-[#777783] leading-normal">
-                  Set deadlines months or years out with built-in prep lead times.
+                  Set deadlines months or years out with built-in prep time.
                 </p>
               </div>
 
@@ -208,13 +150,13 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
 
           {/* Right Column: Direct Sign In / Sign Up Card */}
           <div className="lg:col-span-5 w-full">
-            <div className="bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_4px_24px_rgba(23,25,35,0.06)] p-6 sm:p-7 space-y-5">
+            <div className="bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_4px_24px_rgba(23,25,35,0.06)] p-5 sm:p-7 space-y-4 sm:space-y-5">
               
               {/* Card Header & Switcher */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold text-[17px] text-[#171923]">
-                    {isSignUp ? "Create your account" : "Sign in to your wall"}
+                    {isSignUp ? "Create your account" : "Sign in"}
                   </h2>
                   <span className="text-[11px] font-medium text-[#777783] flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-[#1E745A]" />
@@ -357,35 +299,6 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                   )}
                 </button>
               </form>
-
-              {/* Demo Sign In Quick Buttons */}
-              <div className="pt-3 border-t border-[#D8D7DE] space-y-2">
-                <p className="text-[11px] font-semibold text-[#777783] uppercase tracking-wider text-center">
-                  Quick Demo Access
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("alex")}
-                    disabled={isLoading}
-                    className="px-3 py-2 rounded-[8px] border border-[#D8D7DE] bg-[#F4F3F5] hover:bg-[#EAE8ED] text-[#171923] text-[11px] font-medium transition-all text-center flex flex-col items-center justify-center cursor-pointer"
-                  >
-                    <span className="font-semibold text-xs">Alex</span>
-                    <span className="text-[10px] text-[#777783]">`alex` / `password123`</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("taylor")}
-                    disabled={isLoading}
-                    className="px-3 py-2 rounded-[8px] border border-[#D8D7DE] bg-[#F4F3F5] hover:bg-[#EAE8ED] text-[#171923] text-[11px] font-medium transition-all text-center flex flex-col items-center justify-center cursor-pointer"
-                  >
-                    <span className="font-semibold text-xs">Taylor</span>
-                    <span className="text-[10px] text-[#777783]">`taylor` / `password123`</span>
-                  </button>
-                </div>
-              </div>
-
             </div>
           </div>
 

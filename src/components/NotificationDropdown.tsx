@@ -51,7 +51,7 @@ export function NotificationDropdown({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#D8D7DE]/70 bg-[#FFFFFF] shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-[8px] bg-[#FAF6FE] text-[#B78AF2] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-[8px] bg-[var(--color-primary-light)] text-[var(--color-primary-text)] flex items-center justify-center">
             <Bell className="w-3.5 h-3.5 text-[#171923]" />
           </div>
           <div className="flex items-center gap-1.5">
@@ -102,7 +102,7 @@ export function NotificationDropdown({
             {dismissedCount > 0 && (
               <button
                 onClick={onResetDismissed}
-                className="mt-3.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#6B21A8] hover:text-[#171923] px-3 py-1.5 rounded-[8px] bg-[#FAF6FE] border border-[#E5D4F9] hover:bg-[#F5EEFD] transition-all"
+                className="mt-3.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--color-primary-text)] hover:text-[#171923] px-3 py-1.5 rounded-[8px] bg-[var(--color-primary-light)] border border-[var(--color-primary-border)] hover:opacity-90 transition-all"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Restore {dismissedCount} dismissed task{dismissedCount > 1 ? "s" : ""}</span>
@@ -213,7 +213,7 @@ export function NotificationDropdown({
         ) : onViewAllTagged ? (
           <div className="flex items-center justify-between w-full">
             <span className="flex items-center gap-1 text-[#777783]">
-              <AtSign className="w-3 h-3 text-[#B78AF2]" />
+              <AtSign className="w-3 h-3 text-[var(--color-primary)]" />
               Mentions for @{currentUsername}
             </span>
             <button
@@ -221,7 +221,7 @@ export function NotificationDropdown({
                 onViewAllTagged();
                 onClose();
               }}
-              className="text-[#171923] hover:text-[#6B21A8] font-semibold flex items-center gap-1 transition-colors"
+              className="text-[#171923] hover:text-[var(--color-primary-text)] font-semibold flex items-center gap-1 transition-colors"
             >
               <span>View all on wall</span>
               <ExternalLink className="w-3 h-3" />
@@ -229,7 +229,7 @@ export function NotificationDropdown({
           </div>
         ) : (
           <span className="flex items-center gap-1 text-[#777783]">
-            <AtSign className="w-3 h-3 text-[#B78AF2]" />
+            <AtSign className="w-3 h-3 text-[var(--color-primary)]" />
             Mentions for @{currentUsername} & @partner
           </span>
         )}

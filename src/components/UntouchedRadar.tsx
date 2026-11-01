@@ -81,7 +81,7 @@ export function UntouchedRadar({ tasks, onExpandTask }: UntouchedRadarProps) {
                 <div className="mt-2 flex items-center justify-between text-[11px] text-[#777783]">
                   <span className="flex items-center gap-1 font-medium">
                     <Clock className="w-3 h-3 text-[#777783]" />
-                    {task.lead_time_days || 0}d lead time
+                    {task.lead_time_days || 0}d prep time
                   </span>
 
                   <span className="flex items-center gap-0.5 text-[#171923] font-semibold group-hover:text-[#6B21A8]">

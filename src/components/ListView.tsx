@@ -59,8 +59,8 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                       {task.space_name}
                     </span>
                     {untouched && (
-                      <span className="text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-1.5 py-0.2 rounded-full border border-[#FEDACE]">
-                        Untouched
+                      <span className="text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-2 py-0.5 rounded-full border border-[#FF705B]">
+                        Action needed
                       </span>
                     )}
                   </div>
@@ -96,7 +96,7 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
               <th className="py-3 px-4">Task</th>
               <th className="py-3 px-4">Space</th>
               <th className="py-3 px-4">Target Deadline</th>
-              <th className="py-3 px-4">Lead Time Effort</th>
+              <th className="py-3 px-4">Prep Time</th>
               <th className="py-3 px-4">Notes</th>
               <th className="py-3 px-4">Author</th>
             </tr>
@@ -138,9 +138,9 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                         {task.title}
                       </span>
                       {untouched && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-1.5 py-0.5 rounded-full border border-[#FEDACE]">
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-[#C2410C] bg-[#FFF2EE] px-2 py-0.5 rounded-full border border-[#FF705B]">
                           <AlertTriangle className="w-3 h-3 text-[#FF705B]" />
-                          Untouched
+                          Action needed
                         </span>
                       )}
                     </div>

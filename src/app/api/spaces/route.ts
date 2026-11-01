@@ -11,13 +11,16 @@ export async function GET(req: Request) {
     }
 
     const spaces = await sql`
-      SELECT id, name, slug, color, icon, created_at
-      FROM spaces
-      ORDER BY name ASC;
+      SELECT s.id, s.name, s.slug, s.color, s.icon, s.created_at,
+             COUNT(t.id)::int as task_count
+      FROM spaces s
+      LEFT JOIN tasks t ON t.space_id = s.id
+      GROUP BY s.id, s.name, s.slug, s.color, s.icon, s.created_at
+      ORDER BY s.name ASC;
     `;
     return NextResponse.json({ spaces });
-  } catch (error: any) {
-    if (error?.digest === "NEXT_PRERENDER_INTERRUPTED") throw error;
+  } catch (error: unknown) {
+    if (typeof error === "object" && error !== null && "digest" in error && error.digest === "NEXT_PRERENDER_INTERRUPTED") throw error;
     console.error("Failed to fetch spaces:", error);
     return NextResponse.json({ error: "Failed to fetch spaces" }, { status: 500 });
   }
@@ -47,8 +50,8 @@ export async function POST(req: Request) {
     `;
 
     return NextResponse.json({ space: result[0] });
-  } catch (error: any) {
-    if (error?.digest === "NEXT_PRERENDER_INTERRUPTED") throw error;
+  } catch (error: unknown) {
+    if (typeof error === "object" && error !== null && "digest" in error && error.digest === "NEXT_PRERENDER_INTERRUPTED") throw error;
     console.error("Failed to create space:", error);
     return NextResponse.json({ error: "Failed to create space" }, { status: 500 });
   }

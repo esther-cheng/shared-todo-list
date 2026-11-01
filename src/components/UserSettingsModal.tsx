@@ -11,7 +11,6 @@ import {
   Check, 
   AlertCircle, 
   Loader2, 
-  Sparkles,
   ShieldCheck,
   Eye,
   EyeOff
@@ -31,17 +30,11 @@ export function UserSettingsModal({
   onUpdateUser,
 }: UserSettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [savedUser, setSavedUser] = useState<User>(user);
 
   // Form states
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [avatarColor, setAvatarColor] = useState(user.avatar_color || "purple");
-
-  // Keep savedUser in sync if prop changes
-  React.useEffect(() => {
-    setSavedUser(user);
-  }, [user]);
 
   // Security tab states
   const [currentPassword, setCurrentPassword] = useState("");
@@ -64,11 +57,11 @@ export function UserSettingsModal({
   // Determine if the current active tab has changes and is valid to save
   let canSave = false;
   if (activeTab === "profile") {
-    const isProfileChanged = name.trim() !== savedUser.name || cleanUsername !== savedUser.username;
+    const isProfileChanged = name.trim() !== user.name || cleanUsername !== user.username;
     const isProfileValid = name.trim().length > 0 && cleanUsername.length > 0;
     canSave = isProfileChanged && isProfileValid;
   } else if (activeTab === "color") {
-    const isColorChanged = avatarColor !== (savedUser.avatar_color || "purple");
+    const isColorChanged = avatarColor !== (user.avatar_color || "purple");
     canSave = isColorChanged;
   } else if (activeTab === "security") {
     const isSecurityEntered = cleanNewPassword.length > 0;
@@ -135,7 +128,6 @@ export function UserSettingsModal({
         throw new Error(data.error || "Failed to update settings");
       }
 
-      setSavedUser(data.user);
       onUpdateUser(data.user);
 
       if (activeTab === "profile") {
@@ -180,81 +172,86 @@ export function UserSettingsModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#D8D7DE]/70 bg-[#FFFFFF] shrink-0">
-          <div>
-            <h2 className="text-[18px] font-bold text-[#171923] tracking-tight">
+        <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-[#D8D7DE]/70 bg-[#FFFFFF] shrink-0">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-[16px] sm:text-[18px] font-bold text-[#171923] tracking-tight">
               User Settings
             </h2>
-            <p className="text-[12px] text-[#777783] mt-0.5">
+            <p className="text-[11px] sm:text-[12px] text-[#777783] mt-0.5 truncate sm:whitespace-normal">
               Manage your personal profile, colors, and security.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-[10px] text-[#777783] hover:text-[#171923] hover:bg-[#F4F3F5] transition-colors"
+            className="w-8 h-8 rounded-full bg-[#F4F3F5] text-[#171923] hover:bg-[#D8D7DE] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
             aria-label="Close modal"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-1 px-6 pt-2 border-b border-[#D8D7DE]/60 bg-[#F4F3F5]/50 shrink-0 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("profile");
-              setError(null);
-              setSuccessMessage(null);
-            }}
-            className={`flex items-center gap-2 py-3 px-3.5 text-[13px] font-semibold border-b-2 transition-all shrink-0 ${
-              activeTab === "profile"
-                ? "border-[#B78AF2] text-[#171923]"
-                : "border-transparent text-[#777783] hover:text-[#171923]"
-            }`}
-          >
-            <UserIcon className="w-4 h-4" />
-            <span>Profile & Account</span>
-          </button>
+        {/* Tab Navigation - Fully visible 3-column segmented control on mobile & desktop */}
+        <div className="px-3 sm:px-6 py-2.5 border-b border-[#D8D7DE]/70 bg-[#F4F3F5]/80 shrink-0">
+          <div className="grid grid-cols-3 gap-1 p-1 bg-[#EBE9ED] dark:bg-zinc-800 rounded-[14px]">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("profile");
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+                activeTab === "profile"
+                  ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
+                  : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
+              }`}
+            >
+              <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="sm:hidden">Profile</span>
+              <span className="hidden sm:inline">Profile & Account</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("color");
-              setError(null);
-              setSuccessMessage(null);
-            }}
-            className={`flex items-center gap-2 py-3 px-3.5 text-[13px] font-semibold border-b-2 transition-all shrink-0 ${
-              activeTab === "color"
-                ? "border-[#B78AF2] text-[#171923]"
-                : "border-transparent text-[#777783] hover:text-[#171923]"
-            }`}
-          >
-            <Palette className="w-4 h-4" />
-            <span>Avatar & Color</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("color");
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+                activeTab === "color"
+                  ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
+                  : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
+              }`}
+            >
+              <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="sm:hidden">Avatar</span>
+              <span className="hidden sm:inline">Avatar & Color</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("security");
-              setError(null);
-              setSuccessMessage(null);
-            }}
-            className={`flex items-center gap-2 py-3 px-3.5 text-[13px] font-semibold border-b-2 transition-all shrink-0 ${
-              activeTab === "security"
-                ? "border-[#B78AF2] text-[#171923]"
-                : "border-transparent text-[#777783] hover:text-[#171923]"
-            }`}
-          >
-            <Lock className="w-4 h-4" />
-            <span>Password & Security</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("security");
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={`flex items-center justify-center gap-1.5 py-2 px-1 sm:px-3 text-xs sm:text-[13px] font-semibold rounded-[10px] transition-all cursor-pointer ${
+                activeTab === "security"
+                  ? "bg-[#FFFFFF] dark:bg-zinc-700 text-[#171923] dark:text-zinc-50 shadow-xs"
+                  : "text-[#777783] dark:text-zinc-400 hover:text-[#171923]"
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="sm:hidden">Security</span>
+              <span className="hidden sm:inline">Password & Security</span>
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col justify-between">
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
             {/* Success Banner */}
             {successMessage && (
               <div className="flex items-center gap-2.5 p-3 rounded-[12px] bg-[#EFF8F5] border border-[#CCEBE1] text-[#065F46] text-[13px] animate-in fade-in duration-200">
@@ -351,7 +348,7 @@ export function UserSettingsModal({
                           onClick={() => setAvatarColor(colorKey)}
                           className={`flex items-center gap-3 p-2.5 rounded-[12px] border text-left transition-all ${
                             isSelected
-                              ? "border-[#171923] bg-[#FFFFFF] shadow-sm ring-2 ring-[#B78AF2]/40"
+                              ? "border-[#171923] bg-[#FFFFFF] shadow-sm ring-2 ring-[var(--color-primary)]/40"
                               : "border-[#D8D7DE] bg-[#FFFFFF] hover:bg-[#F4F3F5]"
                           }`}
                         >
@@ -469,7 +466,7 @@ export function UserSettingsModal({
           </div>
 
           {/* Modal Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#F4F3F5] border-t border-[#D8D7DE]/70 shrink-0">
+          <div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 sm:py-4 bg-[#F4F3F5] border-t border-[#D8D7DE]/70 shrink-0">
             <button
               type="button"
               onClick={onClose}

@@ -2,63 +2,144 @@
 
 import React, { useState } from "react";
 import { Task, Space } from "@/types";
-import { getSpaceColor, formatDate } from "@/lib/colors";
-import { X, Clock, Send, Trash2, Calendar, Check } from "lucide-react";
+import { getSpaceColor, formatDate, getUserAvatarStyle, getUserHighlightStyle } from "@/lib/colors";
+import { X, Clock, Send, Trash2, Check } from "lucide-react";
 
 interface TaskDetailModalProps {
   task: Task | null;
-  spaces: Space[];
-  currentUser: string;
+  spaces?: Space[];
+  currentUser?: string;
+  currentUsername?: string;
+  userColor?: string;
   onClose: () => void;
   onUpdateTask: (updatedFields: Partial<Task>) => Promise<void>;
   onAddNote: (content: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
 }
 
-export function TaskDetailModal({
+export function TaskDetailModal(props: TaskDetailModalProps) {
+  if (!props.task) return null;
+  return <TaskDetailModalContent {...props} task={props.task} />;
+}
+
+interface TaskDetailModalContentProps extends Omit<TaskDetailModalProps, "task"> {
+  task: Task;
+}
+
+function TaskDetailModalContent({
   task,
-  spaces,
-  currentUser,
+  currentUsername,
+  userColor,
   onClose,
   onUpdateTask,
   onAddNote,
   onDeleteTask,
-}: TaskDetailModalProps) {
-  if (!task) return null;
-
+}: TaskDetailModalContentProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [deadline, setDeadline] = useState(task.deadline ? task.deadline.slice(0, 10) : "");
-  const [leadTimeDays, setLeadTimeDays] = useState(task.lead_time_days || 0);
+  const [leadTimeDays, setLeadTimeDays] = useState<string | number>(task.lead_time_days ?? 0);
   const [status, setStatus] = useState<"todo" | "in_progress" | "completed">(task.status);
-  const [spaceId, setSpaceId] = useState(task.space_id);
+  const [spaceId] = useState(task.space_id);
   const [noteInput, setNoteInput] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
   const spaceStyle = getSpaceColor(task.space_color);
+  const activeAvatarStyle = getUserAvatarStyle(userColor || "purple");
+  const userHighlight = getUserHighlightStyle(userColor);
+
+  // Collect available tags: defaults + current user tag + tags found in task notes
+  const defaultTags = ["@alex", "@taylor", "@partner"];
+  const userTag = currentUsername ? `@${currentUsername.toLowerCase().replace(/^@/, "")}` : null;
+
+  const noteTags = new Set<string>();
+  if (task.notes) {
+    for (const n of task.notes) {
+      if (n.tagged_users && Array.isArray(n.tagged_users)) {
+        for (const t of n.tagged_users) {
+          if (typeof t === "string" && t.startsWith("@")) {
+            noteTags.add(t.toLowerCase());
+          }
+        }
+      }
+      const matches = n.content?.match(/@[a-zA-Z0-9_-]+/g);
+      if (matches) {
+        for (const m of matches) {
+          noteTags.add(m.toLowerCase());
+        }
+      }
+    }
+  }
+
+  const availableTags = Array.from(
+    new Set([
+      ...(userTag ? [userTag] : []),
+      ...defaultTags,
+      ...Array.from(noteTags),
+    ])
+  );
+
+  // Filter notes based on active tag filter
+  const filteredNotes = task.notes ? task.notes.filter((note) => {
+    if (!selectedTag) return true;
+    const targetTag = selectedTag.toLowerCase();
+
+    if (note.tagged_users && Array.isArray(note.tagged_users)) {
+      if (note.tagged_users.some((t) => typeof t === "string" && t.toLowerCase() === targetTag)) {
+        return true;
+      }
+    }
+
+    if (note.content && note.content.toLowerCase().includes(targetTag)) {
+      return true;
+    }
+
+    return false;
+  }) : [];
+
+  const leadTimeNum = leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0;
 
   // Calculate estimated start date
   let calculatedStartDate: Date | null = null;
-  if (deadline && Number(leadTimeDays) > 0) {
+  if (deadline && leadTimeNum > 0) {
     const d = new Date(deadline);
-    calculatedStartDate = new Date(d.getTime() - Number(leadTimeDays) * 24 * 60 * 60 * 1000);
+    calculatedStartDate = new Date(d.getTime() - leadTimeNum * 24 * 60 * 60 * 1000);
   }
 
-  const handleSaveFields = async () => {
+  const handleSaveFields = async (overrideLeadTime?: number | unknown) => {
+    const finalLeadTime = typeof overrideLeadTime === "number"
+      ? overrideLeadTime
+      : (leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0);
+
     setIsSaving(true);
     try {
       await onUpdateTask({
         title,
         description,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        lead_time_days: Number(leadTimeDays),
+        lead_time_days: finalLeadTime,
         status,
         space_id: spaceId,
       });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleLeadTimeBlur = () => {
+    const trimmed = typeof leadTimeDays === "string" ? leadTimeDays.trim() : "";
+    let finalNum = 0;
+    if (typeof leadTimeDays === "number") {
+      finalNum = Math.max(0, leadTimeDays);
+    } else if (trimmed !== "" && !isNaN(Number(trimmed))) {
+      finalNum = Math.max(0, parseInt(trimmed, 10));
+    } else {
+      finalNum = 0; // if no number is put in, set it at 0
+    }
+    setLeadTimeDays(finalNum);
+    handleSaveFields(finalNum);
   };
 
   const handleSendNote = async (e: React.FormEvent) => {
@@ -71,10 +152,6 @@ export function TaskDetailModal({
     } finally {
       setIsSubmittingNote(false);
     }
-  };
-
-  const insertMention = (tag: string) => {
-    setNoteInput((prev) => (prev ? `${prev} ${tag} ` : `${tag} `));
   };
 
   return (
@@ -97,6 +174,11 @@ export function TaskDetailModal({
             <span className="text-[12px] text-[#777783] truncate">
               by <strong className="text-[#171923] font-medium">{task.created_by}</strong>
             </span>
+            {isSaving && (
+              <span className="text-[11px] text-[#777783] italic ml-1">
+                Saving...
+              </span>
+            )}
           </div>
 
           <button
@@ -156,26 +238,26 @@ export function TaskDetailModal({
                 Context & Notes
               </label>
               <textarea
-                rows={2}
+                rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={handleSaveFields}
                 placeholder="Add instructions, links, or details..."
-                className="w-full text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] placeholder:text-[#777783]"
+                className="w-full min-h-[100px] text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] placeholder:text-[#777783] resize-y"
               />
             </div>
           </div>
 
-          {/* Timeline & Lead-Time */}
+          {/* Timeline & Prep Time */}
           <div className="p-3.5 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE]/70 space-y-2.5">
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#171923]" />
               <h4 className="text-[12px] font-semibold text-[#171923]">
-                Timeline & Lead Time
+                Timeline & Prep Time
               </h4>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] text-[#777783] font-medium block mb-1">
                   Target Deadline
@@ -184,65 +266,86 @@ export function TaskDetailModal({
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  onBlur={handleSaveFields}
-                  className="w-full text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:outline-none text-[#171923]"
+                  onBlur={() => handleSaveFields()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:outline-none text-[#171923] min-h-[38px]"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] text-[#777783] font-medium block mb-1">
-                  Effort (Days)
+                  Prep Time (Days)
                 </label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                   <input
                     type="number"
                     min="0"
                     step="1"
                     value={leadTimeDays}
-                    onChange={(e) => setLeadTimeDays(Number(e.target.value))}
-                    onBlur={handleSaveFields}
-                    placeholder="e.g. 42"
-                    className="w-full text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:outline-none text-[#171923]"
+                    onChange={(e) => setLeadTimeDays(e.target.value)}
+                    onBlur={handleLeadTimeBlur}
+                    placeholder="0"
+                    className="flex-1 min-w-[70px] text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:outline-none text-[#171923] min-h-[38px]"
                   />
-                  <span className="text-[11px] text-[#777783] shrink-0 font-medium">
-                    {leadTimeDays >= 7 ? `≈ ${(leadTimeDays / 7).toFixed(1)}w` : `${leadTimeDays}d`}
+                  <span className="text-[11px] text-[#777783] shrink-0 font-medium px-2 py-1 rounded-[6px] bg-white border border-[#D8D7DE]">
+                    {leadTimeNum >= 7 ? `≈ ${(leadTimeNum / 7).toFixed(1)}w` : `${leadTimeNum}d`}
                   </span>
                 </div>
               </div>
             </div>
 
             {calculatedStartDate && (
-              <div className="p-2.5 rounded-[8px] bg-white border border-[#E5D4F9] text-[11px] text-[#171923] leading-relaxed">
-                <span className="font-semibold text-[#6B21A8]">Start window: </span>
-                Begin work by <strong className="font-semibold text-[#6B21A8]">{formatDate(calculatedStartDate.toISOString())}</strong> to finish before <span className="underline">{formatDate(deadline)}</span>.
+              <div className={`p-2.5 rounded-[8px] bg-white border ${userHighlight.border} text-[11px] text-[#171923] leading-relaxed`}>
+                <span className={`font-semibold ${userHighlight.textDark}`}>Start window: </span>
+                Begin work by <strong className={`font-semibold ${userHighlight.textDark}`}>{formatDate(calculatedStartDate.toISOString())}</strong> to finish before <span className="underline">{formatDate(deadline)}</span>.
               </div>
             )}
           </div>
 
           {/* Social Notes Stream */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase">
-                Notes & Mentions ({task.notes?.length || 0})
+                Notes & Mentions ({filteredNotes.length}{selectedTag ? ` of ${task.notes?.length || 0}` : ""})
               </label>
-              <div className="flex items-center gap-1">
-                {["@alex", "@taylor", "@partner"].map((tag) => (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {selectedTag && (
                   <button
-                    key={tag}
                     type="button"
-                    onClick={() => insertMention(tag)}
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F4F3F5] hover:bg-[#E5D4F9] text-[#171923] transition-colors"
+                    onClick={() => setSelectedTag(null)}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#EBE9ED] hover:bg-[#D8D7DE] text-[#171923] transition-colors cursor-pointer"
                   >
-                    {tag}
+                    All
                   </button>
-                ))}
+                )}
+                {availableTags.map((tag) => {
+                  const isSelected = selectedTag?.toLowerCase() === tag.toLowerCase();
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        // Toggles filter by tag; strictly does NOT insert mention into note input
+                        setSelectedTag(isSelected ? null : tag);
+                      }}
+                      className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer flex items-center gap-1 ${
+                        isSelected
+                          ? `${activeAvatarStyle.bg} ${activeAvatarStyle.text} shadow-xs ring-2 ring-offset-1 ring-[#171923]/20 font-bold`
+                          : "bg-[#F4F3F5] hover:bg-[#D8D7DE] text-[#171923] border border-transparent"
+                      }`}
+                      title={isSelected ? `Filtering by ${tag}. Click to clear.` : `Filter notes by ${tag}`}
+                    >
+                      <span>{tag}</span>
+                      {isSelected && <span className="text-[9px] opacity-80">✕</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Notes List */}
-            <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-              {task.notes && task.notes.length > 0 ? (
-                task.notes.map((note) => (
+            <div className="space-y-1.5 max-h-48 sm:max-h-56 overflow-y-auto pr-1">
+              {filteredNotes.length > 0 ? (
+                filteredNotes.map((note) => (
                   <div
                     key={note.id}
                     className="p-2.5 rounded-[8px] bg-[#F4F3F5] text-[11px] space-y-0.5"
@@ -258,10 +361,15 @@ export function TaskDetailModal({
                     <p className="text-[#171923] leading-relaxed">
                       {note.content.split(" ").map((word, idx) => {
                         if (word.startsWith("@")) {
+                          const isMatched = selectedTag && word.toLowerCase().includes(selectedTag.toLowerCase());
                           return (
                             <span
                               key={idx}
-                              className="font-semibold text-[#6B21A8] bg-[#E5D4F9]/60 px-1 py-0.2 rounded"
+                              className={`font-semibold px-1 py-0.2 rounded ${
+                                isMatched
+                                  ? `${activeAvatarStyle.bg} ${activeAvatarStyle.text} font-bold`
+                                  : "text-[#6B21A8] bg-[#E5D4F9]/60"
+                              }`}
                             >
                               {word}{" "}
                             </span>
@@ -273,8 +381,21 @@ export function TaskDetailModal({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-3 text-[11px] text-[#777783] italic">
-                  No notes yet. Add context or tag someone below.
+                <div className="text-center py-4 text-[11px] text-[#777783] italic space-y-1">
+                  {selectedTag ? (
+                    <div>
+                      <p>No notes mentioning <strong>{selectedTag}</strong>.</p>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTag(null)}
+                        className="text-xs font-semibold text-[#171923] underline cursor-pointer mt-1 block mx-auto"
+                      >
+                        Clear filter & show all notes
+                      </button>
+                    </div>
+                  ) : (
+                    <p>No notes yet. Add context or tag someone below.</p>
+                  )}
                 </div>
               )}
             </div>

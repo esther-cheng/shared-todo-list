@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Space } from "@/types";
-import { formatDate } from "@/lib/colors";
+import { formatDate, getUserHighlightStyle } from "@/lib/colors";
 import { X, Clock, Calendar, Plus } from "lucide-react";
 
 interface CreateTaskModalProps {
   spaces: Space[];
   currentUser: string;
+  userColor?: string;
   defaultSpaceId?: string;
   onClose: () => void;
   onCreateTask: (data: {
@@ -23,21 +24,84 @@ interface CreateTaskModalProps {
 export function CreateTaskModal({
   spaces,
   currentUser,
+  userColor,
   defaultSpaceId,
   onClose,
   onCreateTask,
 }: CreateTaskModalProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [spaceId, setSpaceId] = useState(defaultSpaceId || spaces[0]?.id || "");
-  const [deadline, setDeadline] = useState("");
-  const [leadTimeDays, setLeadTimeDays] = useState(0);
+  const userHighlight = getUserHighlightStyle(userColor);
+  const [draftLoaded] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(`tandem_task_draft_${currentUser || "default"}`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [title, setTitle] = useState(() => draftLoaded?.title || "");
+  const [description, setDescription] = useState(() => draftLoaded?.description || "");
+  const [spaceId, setSpaceId] = useState(() => {
+    if (draftLoaded?.spaceId && spaces.some((s) => s.id === draftLoaded.spaceId)) {
+      return draftLoaded.spaceId;
+    }
+    return defaultSpaceId || spaces[0]?.id || "";
+  });
+  const [deadline, setDeadline] = useState(() => draftLoaded?.deadline || "");
+  const [leadTimeDays, setLeadTimeDays] = useState<string | number>(() => draftLoaded?.leadTimeDays ?? 0);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(() => Boolean(
+    draftLoaded?.title || draftLoaded?.description || draftLoaded?.deadline || draftLoaded?.leadTimeDays
+  ));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sync draft to localStorage on any field change
+  useEffect(() => {
+    const key = `tandem_task_draft_${currentUser || "default"}`;
+    const hasContent = Boolean(
+      title.trim() || description.trim() || deadline || Number(leadTimeDays) > 0
+    );
+
+    try {
+      if (hasContent) {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            title,
+            description,
+            spaceId,
+            deadline,
+            leadTimeDays,
+          })
+        );
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.error("Failed to sync task draft:", e);
+    }
+  }, [title, description, spaceId, deadline, leadTimeDays, currentUser]);
+
+  const handleClearDraft = () => {
+    try {
+      localStorage.removeItem(`tandem_task_draft_${currentUser || "default"}`);
+    } catch (e) {
+      console.error("Failed to clear draft:", e);
+    }
+    setTitle("");
+    setDescription("");
+    setDeadline("");
+    setLeadTimeDays(0);
+    setSpaceId(defaultSpaceId || spaces[0]?.id || "");
+    setHasRestoredDraft(false);
+  };
+
+  const leadTimeNum = leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0;
+
   let calculatedReminderDate: Date | null = null;
-  if (deadline && Number(leadTimeDays) > 0) {
+  if (deadline && leadTimeNum > 0) {
     const d = new Date(deadline);
-    calculatedReminderDate = new Date(d.getTime() - Number(leadTimeDays) * 24 * 60 * 60 * 1000);
+    calculatedReminderDate = new Date(d.getTime() - leadTimeNum * 24 * 60 * 60 * 1000);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,9 +115,14 @@ export function CreateTaskModal({
         description,
         space_id: spaceId,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        lead_time_days: Number(leadTimeDays),
+        lead_time_days: leadTimeNum,
         created_by: currentUser,
       });
+      try {
+        localStorage.removeItem(`tandem_task_draft_${currentUser || "default"}`);
+      } catch (e) {
+        console.error("Failed to remove draft after submission:", e);
+      }
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -88,6 +157,20 @@ export function CreateTaskModal({
             <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
+
+        {/* Unsaved draft restored banner */}
+        {hasRestoredDraft && (
+          <div className={`mx-4 sm:mx-5 mt-3.5 px-3.5 py-2 rounded-[10px] ${userHighlight.bgLight} ${userHighlight.textDark} text-[11px] font-medium border ${userHighlight.border} flex items-center justify-between shrink-0`}>
+            <span>Restored your unsaved draft</span>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              className="text-[#171923] underline font-semibold hover:opacity-80 ml-2 cursor-pointer"
+            >
+              Discard draft
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
           {/* Space Selector */}
@@ -129,16 +212,16 @@ export function CreateTaskModal({
               Context & Notes
             </label>
             <textarea
-              rows={2}
+              rows={4}
               placeholder="Instructions, links, or checklist..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923]"
+              className="w-full min-h-[100px] text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] resize-y"
             />
           </div>
 
-          {/* Target Deadline & Lead-Time */}
-          <div className="grid grid-cols-2 gap-3 pt-0.5">
+          {/* Target Deadline & Prep Time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
             <div>
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-[#777783]" />
@@ -155,23 +238,40 @@ export function CreateTaskModal({
             <div>
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-[#777783]" />
-                Lead Time (Days)
+                Prep Time (Days)
               </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="e.g. 42"
-                value={leadTimeDays || ""}
-                onChange={(e) => setLeadTimeDays(Number(e.target.value))}
-                className="w-full text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px]"
-              />
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  value={leadTimeDays}
+                  onChange={(e) => setLeadTimeDays(e.target.value)}
+                  onBlur={() => {
+                    const trimmed = typeof leadTimeDays === "string" ? leadTimeDays.trim() : "";
+                    let finalNum = 0;
+                    if (typeof leadTimeDays === "number") {
+                      finalNum = Math.max(0, leadTimeDays);
+                    } else if (trimmed !== "" && !isNaN(Number(trimmed))) {
+                      finalNum = Math.max(0, parseInt(trimmed, 10));
+                    } else {
+                      finalNum = 0;
+                    }
+                    setLeadTimeDays(finalNum);
+                  }}
+                  className="flex-1 min-w-[70px] text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px]"
+                />
+                <span className="text-[11px] text-[#777783] shrink-0 font-medium px-2 py-1 rounded-[6px] bg-[#F4F3F5] border border-[#D8D7DE]">
+                  {leadTimeNum >= 7 ? `≈ ${(leadTimeNum / 7).toFixed(1)}w` : `${leadTimeNum}d`}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Dynamic Reminder Alert */}
           {calculatedReminderDate && (
-            <div className="p-2.5 rounded-[10px] bg-[#F5EEFD] text-[11px] text-[#6B21A8] border border-[#E5D4F9] leading-relaxed">
+            <div className={`p-2.5 rounded-[10px] ${userHighlight.bgLight} text-[11px] ${userHighlight.textDark} border ${userHighlight.border} leading-relaxed`}>
               <span className="font-semibold">Start reminder: </span>
               Surfaces on <strong className="font-semibold">{formatDate(calculatedReminderDate.toISOString())}</strong>.
             </div>

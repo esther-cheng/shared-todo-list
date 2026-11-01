@@ -21,6 +21,7 @@ interface HeaderProps {
   onResetDismissed?: () => void;
   onSelectTask?: (task: Task) => void;
   taggedCount?: number;
+  userColor?: string;
   onOpenTaggedFilter: () => void;
 }
 
@@ -93,7 +94,7 @@ export function Header({
               <span className="font-display text-3xl sm:text-[32px] font-bold text-[#171923] tracking-normal leading-none">
                 Tandem
               </span>
-              <span className="w-2 h-2 rounded-full bg-[#B78AF2]" />
+              <span className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />
             </div>
             <p className="hidden sm:block text-[12px] text-[#777783] font-medium leading-none mt-1">
               Life&apos;s better in sync.
@@ -110,7 +111,7 @@ export function Header({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search tasks, context, @mentions..."
-              className="w-full pl-9 pr-4 py-2 rounded-[12px] text-[14px] bg-[#F4F3F5] border border-transparent focus:border-[#B78AF2] focus:bg-[#FFFFFF] focus:outline-none transition-all placeholder:text-[#777783] text-[#171923]"
+              className="w-full pl-9 pr-4 py-2 rounded-[12px] text-[14px] bg-[#F4F3F5] border border-transparent focus:border-[var(--color-primary)] focus:bg-[#FFFFFF] focus:outline-none transition-all placeholder:text-[#777783] text-[#171923]"
             />
           </div>
         </div>
@@ -289,7 +290,7 @@ export function Header({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search tasks, descriptions, @mentions..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-[12px] text-xs bg-[#F4F3F5] border border-transparent focus:border-[#B78AF2] focus:bg-[#FFFFFF] focus:outline-none text-[#171923]"
+              className="w-full pl-9 pr-4 py-2.5 rounded-[12px] text-xs bg-[#F4F3F5] border border-transparent focus:border-[var(--color-primary)] focus:bg-[#FFFFFF] focus:outline-none text-[#171923]"
             />
           </div>
         </div>

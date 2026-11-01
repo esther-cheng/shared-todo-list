@@ -13,6 +13,14 @@ export interface Space {
   color: string;
   icon: string;
   created_at: string;
+  task_count?: number;
+}
+
+export interface FilterCounts {
+  all: number;
+  tagged: number;
+  radar: number;
+  spaces: Record<string, number>;
 }
 
 export interface TaskNote {
