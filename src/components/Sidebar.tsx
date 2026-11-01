@@ -34,7 +34,6 @@ export function Sidebar({
   onSelectSpace,
   activeFilter,
   onSelectFilter,
-  currentUser,
   userColor,
   filterCounts,
   onOpenCreateSpaceModal,
@@ -116,7 +115,7 @@ export function Sidebar({
         >
           <div className="flex items-center gap-2">
             <AtSign className={`w-4 h-4 ${activeFilter === "tagged" ? userHighlight.textDark : "text-[#777783]"}`} />
-            <span>Tagged for @{currentUser.toLowerCase()}</span>
+            <span>Tagged for you</span>
           </div>
           <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "tagged"

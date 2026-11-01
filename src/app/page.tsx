@@ -472,7 +472,7 @@ export default function HomePage() {
                 </span>
                 {activeFilter !== "all" && (
                   <span className={`font-semibold px-2.5 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`}>
-                    Filter: {activeFilter}
+                    Filter: {activeFilter === "tagged" ? "Tagged for you" : activeFilter === "radar" ? "Action needed" : activeFilter}
                   </span>
                 )}
                 <span className="text-[#777783] font-normal">

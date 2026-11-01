@@ -23,7 +23,6 @@ export function MobileSpaceBar({
   onSelectSpace,
   activeFilter,
   onSelectFilter,
-  currentUser,
   userColor,
   filterCounts,
   onOpenCreateSpace,
@@ -68,7 +67,7 @@ export function MobileSpaceBar({
         }`}
       >
         <AtSign className={`w-3.5 h-3.5 ${activeFilter === "tagged" ? userHighlight.textDark : "text-[#777783]"}`} />
-        <span>For @{currentUser.toLowerCase()}</span>
+        <span>Tagged for you</span>
         <span
           className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
             activeFilter === "tagged"
