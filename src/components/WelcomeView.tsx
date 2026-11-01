@@ -4,13 +4,11 @@ import React, { useState } from "react";
 import { User } from "@/types";
 import { 
   Users, 
-  Calendar, 
   Clock, 
   MessageSquare, 
   CheckCircle2, 
   ArrowRight, 
   Loader2,
-  Sparkles,
   ShieldCheck,
   Eye,
   EyeOff
@@ -67,34 +65,6 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
         setError(err.message);
       } else {
         setError("An unexpected error occurred");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleQuickDemo = async (demoUser: "alex" | "taylor") => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: demoUser,
-          password: "password123",
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || "Failed to sign in demo user");
-      }
-      onLoginSuccess(data.user);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Demo sign in failed");
       }
     } finally {
       setIsLoading(false);
@@ -214,7 +184,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold text-[17px] text-[#171923]">
-                    {isSignUp ? "Create your account" : "Sign in to your wall"}
+                    {isSignUp ? "Create your account" : "Sign in"}
                   </h2>
                   <span className="text-[11px] font-medium text-[#777783] flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-[#1E745A]" />
@@ -357,35 +327,6 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                   )}
                 </button>
               </form>
-
-              {/* Demo Sign In Quick Buttons */}
-              <div className="pt-3 border-t border-[#D8D7DE] space-y-2">
-                <p className="text-[11px] font-semibold text-[#777783] uppercase tracking-wider text-center">
-                  Quick Demo Access
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("alex")}
-                    disabled={isLoading}
-                    className="px-3 py-2 rounded-[8px] border border-[#D8D7DE] bg-[#F4F3F5] hover:bg-[#EAE8ED] text-[#171923] text-[11px] font-medium transition-all text-center flex flex-col items-center justify-center cursor-pointer"
-                  >
-                    <span className="font-semibold text-xs">Alex</span>
-                    <span className="text-[10px] text-[#777783]">`alex` / `password123`</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemo("taylor")}
-                    disabled={isLoading}
-                    className="px-3 py-2 rounded-[8px] border border-[#D8D7DE] bg-[#F4F3F5] hover:bg-[#EAE8ED] text-[#171923] text-[11px] font-medium transition-all text-center flex flex-col items-center justify-center cursor-pointer"
-                  >
-                    <span className="font-semibold text-xs">Taylor</span>
-                    <span className="text-[10px] text-[#777783]">`taylor` / `password123`</span>
-                  </button>
-                </div>
-              </div>
-
             </div>
           </div>
 

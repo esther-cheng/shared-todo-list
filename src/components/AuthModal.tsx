@@ -230,10 +230,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               )}
             </button>
           </div>
-
-          <p className="text-center text-[10px] text-[#777783] pt-0.5">
-            Demo: <span className="font-semibold text-[#171923]">alex</span> / <span className="font-semibold text-[#171923]">password123</span>
-          </p>
         </form>
       </div>
     </div>
