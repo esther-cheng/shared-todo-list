@@ -64,6 +64,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
   const [calendarMode, setCalendarMode] = useState<CalendarMode>("month");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate());
+  const [mobileWeekTab, setMobileWeekTab] = useState<"agenda" | "day">("agenda");
 
   const userHighlight = getUserHighlightStyle(userColor);
 
@@ -178,6 +179,12 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
 
   // Week calculation
   const weekDates = getWeekDates(currentDate);
+  const weekTotalTasks = weekDates.reduce((acc, d) => acc + getTasksDueOnDate(d).length, 0);
+  const weekCompletedTasks = weekDates.reduce(
+    (acc, d) => acc + getTasksDueOnDate(d).filter((t) => t.status === "completed").length,
+    0
+  );
+  const selectedDayTasksInWeek = getTasksDueOnDate(currentDate);
 
   // Daily view calculations
   const dayEnd = endOfDay(currentDate);
@@ -476,8 +483,378 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
       {/* ========================================================================= */}
       {calendarMode === "week" && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* 7-Day Responsive Horizontal Board (Horizontal swipe with snap on mobile, 7 columns on desktop) */}
-          <div className="flex md:grid md:grid-cols-7 gap-2.5 overflow-x-auto md:overflow-visible pb-3 md:pb-0 snap-x">
+          {/* ------------------------------------------------------------- */}
+          {/* MOBILE VIEW (< md): 7-Day Fit Strip + Week Agenda / Day Focus */}
+          {/* ------------------------------------------------------------- */}
+          <div className="md:hidden space-y-3.5">
+            {/* 7-Day Fit Strip: All 7 days fit 100% on mobile screen */}
+            <div className="grid grid-cols-7 gap-1 p-1.5 rounded-[18px] bg-[#F4F3F5] dark:bg-zinc-800/80 border border-[#D8D7DE] dark:border-zinc-700/80">
+              {weekDates.map((dateItem, idx) => {
+                const isToday = isSameDay(dateItem, new Date());
+                const isSelected = isSameDay(dateItem, currentDate);
+                const dayTasks = getTasksDueOnDate(dateItem);
+                const dayNum = dateItem.getDate();
+                const dayNameShort = dateItem.toLocaleDateString("en-US", { weekday: "short" });
+
+                return (
+                  <button
+                    key={`mobile-week-strip-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      setCurrentDate(dateItem);
+                      setSelectedDay(dayNum);
+                      if (mobileWeekTab === "agenda") {
+                        const el = document.getElementById(`week-agenda-day-${idx}`);
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        }
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center py-2 px-0.5 rounded-[12px] transition-all cursor-pointer min-h-[58px] ${
+                      isSelected
+                        ? "bg-[#171923] text-white shadow-xs"
+                        : isToday
+                        ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border} font-bold`
+                        : "hover:bg-white dark:hover:bg-zinc-700 text-[#171923] dark:text-zinc-200"
+                    }`}
+                  >
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? "text-white/80" : "text-[#777783] dark:text-zinc-400"}`}>
+                      {dayNameShort}
+                    </span>
+                    <span className={`text-xs font-bold mt-0.5 ${isSelected ? "text-white" : ""}`}>
+                      {dayNum}
+                    </span>
+                    {/* Task count dot / badge */}
+                    <div className="h-2 flex items-center justify-center mt-1">
+                      {dayTasks.length > 0 ? (
+                        <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#B78AF2]" : "bg-[#FF705B]"}`} />
+                      ) : (
+                        <span className="w-1.5 h-1.5" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sub-header Controls: Week Task Count & Segmented Toggle (Agenda vs Day Focus) */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-[#171923] dark:text-zinc-200">
+                  {weekTotalTasks} {weekTotalTasks === 1 ? "task" : "tasks"} this week
+                </span>
+                {weekCompletedTasks > 0 && (
+                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    {weekCompletedTasks} done
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center bg-[#F4F3F5] dark:bg-zinc-800 p-0.5 rounded-full border border-[#D8D7DE] dark:border-zinc-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileWeekTab("agenda")}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
+                    mobileWeekTab === "agenda"
+                      ? "bg-white dark:bg-zinc-700 text-[#171923] dark:text-zinc-100 shadow-xs"
+                      : "text-[#777783] dark:text-zinc-400"
+                  }`}
+                >
+                  Week Agenda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileWeekTab("day")}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-all cursor-pointer ${
+                    mobileWeekTab === "day"
+                      ? "bg-white dark:bg-zinc-700 text-[#171923] dark:text-zinc-100 shadow-xs"
+                      : "text-[#777783] dark:text-zinc-400"
+                  }`}
+                >
+                  Day Focus
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Tab 1: Week Agenda (All 7 Days vertical stream) */}
+            {mobileWeekTab === "agenda" && (
+              <div className="space-y-2.5">
+                {weekDates.map((dateItem, idx) => {
+                  const isToday = isSameDay(dateItem, new Date());
+                  const isSelected = isSameDay(dateItem, currentDate);
+                  const dayTasks = getTasksDueOnDate(dateItem);
+                  const dayNum = dateItem.getDate();
+
+                  if (dayTasks.length === 0) {
+                    return (
+                      <div
+                        key={`mobile-agenda-${idx}`}
+                        id={`week-agenda-day-${idx}`}
+                        onClick={() => {
+                          setCurrentDate(dateItem);
+                          setSelectedDay(dayNum);
+                        }}
+                        className={`flex items-center justify-between py-2 px-3 rounded-[12px] transition-all cursor-pointer ${
+                          isSelected
+                            ? `border ${userHighlight.border} ${userHighlight.bgLight}/40`
+                            : isToday
+                            ? "border border-[#171923]/25 bg-[#171923]/5"
+                            : "border border-dashed border-[#D8D7DE] dark:border-zinc-800 bg-[#F4F3F5]/40 dark:bg-zinc-900/40 hover:bg-[#F4F3F5]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-[#171923] dark:text-zinc-200">
+                            {dateItem.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                          </span>
+                          {isToday && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#171923] text-white">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-[#777783] dark:text-zinc-500 font-medium">
+                          No deadlines
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={`mobile-agenda-${idx}`}
+                      id={`week-agenda-day-${idx}`}
+                      className={`rounded-[16px] border transition-all p-3 space-y-2.5 ${
+                        isSelected
+                          ? `border-current ${userHighlight.bgLight}/30 dark:bg-purple-950/20 ring-1.5 ${userHighlight.ring}/40`
+                          : isToday
+                          ? "border-[#171923]/30 bg-[#171923]/5 dark:bg-zinc-800/40"
+                          : "border-[#D8D7DE] dark:border-zinc-800 bg-white dark:bg-zinc-900/60"
+                      }`}
+                    >
+                      {/* Day Header */}
+                      <div className="flex items-center justify-between pb-1.5 border-b border-[#D8D7DE]/60 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-[#171923] dark:text-zinc-100">
+                            {dateItem.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                          </span>
+                          {isToday && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#171923] text-white">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`}>
+                          {dayTasks.length} {dayTasks.length === 1 ? "due" : "due"}
+                        </span>
+                      </div>
+
+                      {/* Day Tasks */}
+                      <div className="space-y-1.5">
+                        {dayTasks.map((task) => {
+                          const spaceStyle = getSpaceColor(task.space_color);
+                          const isDone = task.status === "completed";
+
+                          return (
+                            <div
+                              key={task.id}
+                              onClick={() => onExpandTask(task)}
+                              className="p-2.5 rounded-[12px] bg-[#FFFFFF] dark:bg-zinc-800/70 border border-[#D8D7DE] dark:border-zinc-700/80 hover:border-[#B78AF2] transition-all cursor-pointer flex items-center justify-between gap-2.5 shadow-2xs group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {onToggleStatus && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onToggleStatus(task.id, task.status);
+                                    }}
+                                    className="p-1 -ml-1 text-[#777783] hover:text-[#171923] dark:hover:text-white shrink-0 cursor-pointer"
+                                    aria-label={isDone ? "Mark as to-do" : "Mark as completed"}
+                                  >
+                                    {isDone ? (
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-50" />
+                                    ) : (
+                                      <Circle className="w-4 h-4 text-[#777783]" />
+                                    )}
+                                  </button>
+                                )}
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                    <span
+                                      className={`inline-flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.2 rounded-full border shrink-0 ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
+                                    >
+                                      {getSpaceIcon(task.space_icon, "w-2.5 h-2.5")}
+                                      <span>{task.space_name || "General"}</span>
+                                    </span>
+                                    {task.lead_time_days > 0 && (
+                                      <span className="text-[9px] font-medium text-[#777783] dark:text-zinc-400">
+                                        {task.lead_time_days}d lead
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p
+                                    className={`text-xs font-semibold text-[#171923] dark:text-zinc-100 truncate ${
+                                      isDone ? "line-through text-[#777783] dark:text-zinc-500" : ""
+                                    }`}
+                                  >
+                                    {task.title}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <span className="text-[11px] font-bold text-[#6B21A8] dark:text-[#D8B4FE] shrink-0 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
+                                Details <ArrowRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Mobile Tab 2: Day Focus */}
+            {mobileWeekTab === "day" && (
+              <div className="space-y-3">
+                {/* Selected Day Navigation Banner */}
+                <div className="flex items-center justify-between p-3 rounded-[16px] bg-[#F4F3F5] dark:bg-zinc-800/80 border border-[#D8D7DE] dark:border-zinc-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prev = new Date(currentDate);
+                      prev.setDate(currentDate.getDate() - 1);
+                      setCurrentDate(prev);
+                      setSelectedDay(prev.getDate());
+                    }}
+                    className="p-1.5 rounded-[10px] hover:bg-white dark:hover:bg-zinc-700 text-[#171923] dark:text-zinc-200 transition-colors cursor-pointer min-w-[34px] min-h-[34px] flex items-center justify-center"
+                    aria-label="Previous day"
+                  >
+                    <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-sm font-bold text-[#171923] dark:text-zinc-100">
+                        {currentDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
+                      {isSameDay(currentDate, new Date()) && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#171923] text-white">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[#777783] dark:text-zinc-400">
+                      {selectedDayTasksInWeek.length} {selectedDayTasksInWeek.length === 1 ? "deadline" : "deadlines"} scheduled
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = new Date(currentDate);
+                      next.setDate(currentDate.getDate() + 1);
+                      setCurrentDate(next);
+                      setSelectedDay(next.getDate());
+                    }}
+                    className="p-1.5 rounded-[10px] hover:bg-white dark:hover:bg-zinc-700 text-[#171923] dark:text-zinc-200 transition-colors cursor-pointer min-w-[34px] min-h-[34px] flex items-center justify-center"
+                    aria-label="Next day"
+                  >
+                    <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </div>
+
+                {/* Tasks List */}
+                {selectedDayTasksInWeek.length === 0 ? (
+                  <div className="p-8 rounded-[16px] border border-dashed border-[#D8D7DE] dark:border-zinc-800 bg-[#F4F3F5]/30 dark:bg-zinc-950/20 text-center space-y-1.5">
+                    <p className="text-xs font-semibold text-[#171923] dark:text-zinc-300">
+                      No deadlines on this day
+                    </p>
+                    <p className="text-[11px] text-[#777783] dark:text-zinc-500">
+                      Tap another day in the strip above or switch to Week Agenda.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedDayTasksInWeek.map((task) => {
+                      const spaceStyle = getSpaceColor(task.space_color);
+                      const isDone = task.status === "completed";
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => onExpandTask(task)}
+                          className="p-3.5 rounded-[16px] bg-white dark:bg-zinc-800/70 border border-[#D8D7DE] dark:border-zinc-700/80 hover:border-[#B78AF2] transition-all cursor-pointer flex flex-col gap-2 group"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
+                              >
+                                {getSpaceIcon(task.space_icon, "w-3 h-3")}
+                                <span>{task.space_name || "General"}</span>
+                              </span>
+                              {task.lead_time_days > 0 && (
+                                <span className="text-[10px] font-medium text-[#777783] dark:text-zinc-400 bg-[#F4F3F5] dark:bg-zinc-700/60 px-2 py-0.5 rounded-full">
+                                  {task.lead_time_days}d lead time
+                                </span>
+                              )}
+                            </div>
+
+                            <span className="text-[10px] font-bold text-[#FF705B]">
+                              Due Today
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2.5">
+                            {onToggleStatus && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onToggleStatus(task.id, task.status);
+                                }}
+                                className="p-0.5 text-[#777783] hover:text-[#171923] dark:hover:text-white shrink-0 cursor-pointer"
+                                aria-label={isDone ? "Mark as to-do" : "Mark as completed"}
+                              >
+                                {isDone ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-50" />
+                                ) : (
+                                  <Circle className="w-5 h-5 text-[#777783]" />
+                                )}
+                              </button>
+                            )}
+
+                            <h4
+                              className={`text-sm font-semibold text-[#171923] dark:text-zinc-100 truncate ${
+                                isDone ? "line-through text-[#777783] dark:text-zinc-500" : ""
+                              }`}
+                            >
+                              {task.title}
+                            </h4>
+                          </div>
+
+                          {task.description && (
+                            <p className="text-xs text-[#777783] dark:text-zinc-400 line-clamp-1 pl-7">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ------------------------------------------------------------- */}
+          {/* DESKTOP VIEW (md:): 7-Column Board Grid                        */}
+          {/* ------------------------------------------------------------- */}
+          <div className="hidden md:grid md:grid-cols-7 gap-2.5">
             {weekDates.map((dateItem, idx) => {
               const isToday = isSameDay(dateItem, new Date());
               const isSelected = isSameDay(dateItem, currentDate);
@@ -492,7 +869,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                     setCurrentDate(dateItem);
                     setSelectedDay(dayNum);
                   }}
-                  className={`w-[210px] md:w-auto shrink-0 snap-start flex flex-col rounded-[16px] border transition-all cursor-pointer p-3 min-h-[220px] md:min-h-[280px] ${
+                  className={`flex flex-col rounded-[16px] border transition-all cursor-pointer p-3 min-h-[260px] ${
                     isSelected
                       ? `border-current ${userHighlight.bgLight}/50 dark:bg-purple-950/20 ring-2 ${userHighlight.ring}/40`
                       : isToday
@@ -570,10 +947,6 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
               );
             })}
           </div>
-
-          <p className="text-[11px] text-[#777783] dark:text-zinc-500 text-center md:hidden">
-            ← Swipe horizontally to view all 7 days →
-          </p>
         </div>
       )}
 
