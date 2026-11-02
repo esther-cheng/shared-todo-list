@@ -124,7 +124,7 @@ export function SearchDropdown({
 
   return (
     <div 
-      className="absolute left-0 right-0 top-full mt-2 bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_10px_32px_rgba(23,25,35,0.12)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-[75vh] flex flex-col text-xs"
+      className="fixed inset-x-3 top-[56px] sm:absolute sm:inset-auto sm:left-0 sm:right-0 sm:top-full sm:mt-2 bg-[#FFFFFF] rounded-[20px] border border-[#D8D7DE] shadow-[0_10px_32px_rgba(23,25,35,0.12)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-[75vh] flex flex-col text-xs"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="overflow-y-auto divide-y divide-[#D8D7DE]/50">

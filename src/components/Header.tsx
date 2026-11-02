@@ -61,6 +61,17 @@ export function Header({
   const userMenuRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus mobile search input when it expands
+  useEffect(() => {
+    if (isMobileSearchOpen) {
+      const timer = setTimeout(() => {
+        mobileInputRef.current?.focus();
+      }, 20);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobileSearchOpen]);
 
   // Click outside and escape key handling for all dropdowns
   useEffect(() => {
@@ -107,7 +118,13 @@ export function Header({
     <header className="sticky top-0 z-30 bg-[#FFFFFF] border-b border-[#D8D7DE] px-3 sm:px-8 py-2.5 sm:py-3.5 transition-colors w-full max-w-full">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
         {/* Brand / Logo */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+        <div
+          className={`flex items-center gap-2 sm:gap-3 transition-all duration-150 ease-out ${
+            isMobileSearchOpen
+              ? "max-w-0 opacity-0 pointer-events-none scale-95 overflow-hidden -mr-2 md:max-w-none md:opacity-100 md:scale-100 md:mr-0 md:flex md:shrink-0"
+              : "max-w-[220px] opacity-100 scale-100 shrink-0 min-w-0 flex"
+          }`}
+        >
           {/* Logo icon - hidden first on mobile when space is constrained */}
           <div className="hidden sm:flex w-10 h-10 rounded-[12px] bg-[#171923] text-white items-center justify-center font-display text-2xl font-bold shadow-xs select-none shrink-0">
             T
@@ -122,6 +139,83 @@ export function Header({
             <p className="hidden sm:block text-[12px] text-[#777783] font-medium leading-none mt-1">
               Life&apos;s better in sync.
             </p>
+          </div>
+        </div>
+
+        {/* Mobile Search Bar - transforms from magnifying glass button, grows left and overtakes the logo */}
+        <div
+          ref={mobileSearchContainerRef}
+          className={`md:hidden flex-1 min-w-0 transition-all duration-150 ease-out origin-right ${
+            isMobileSearchOpen ? "block animate-in slide-in-from-right-3 duration-150 fade-in" : "hidden"
+          }`}
+        >
+          <div className="relative flex items-center bg-[#F4F3F5] rounded-[12px] border border-transparent focus-within:border-[var(--color-primary)] focus-within:bg-[#FFFFFF] transition-all px-2.5 py-1 min-h-[38px]">
+            <Search className="w-4 h-4 text-[#777783] shrink-0" />
+            <input
+              ref={mobileInputRef}
+              type="text"
+              value={searchQuery}
+              onFocus={() => setIsSearchOpen(true)}
+              onChange={(e) => {
+                onSearchChange(e.target.value);
+                setIsSearchOpen(true);
+              }}
+              placeholder="Search tasks, context, @mentions..."
+              className="w-full pl-2 pr-1 bg-transparent text-xs text-[#171923] placeholder:text-[#777783] outline-none"
+            />
+            {searchQuery.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSearchChange("");
+                  mobileInputRef.current?.focus();
+                }}
+                className="p-1 text-[#777783] hover:text-[#171923] rounded-full shrink-0 cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileSearchOpen(false);
+                setIsSearchOpen(false);
+              }}
+              className="ml-1 p-1 text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/50 rounded-full shrink-0 cursor-pointer"
+              aria-label="Close search"
+              title="Close search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Mobile Search Dropdown */}
+            <SearchDropdown
+              query={searchQuery}
+              tasks={tasks}
+              currentUser={currentUser}
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              onSelectTask={(task) => {
+                onSelectTask(task);
+                setIsMobileSearchOpen(false);
+                setIsSearchOpen(false);
+              }}
+              onSelectUser={(user) => {
+                onSelectUser?.(user);
+                setIsMobileSearchOpen(false);
+                setIsSearchOpen(false);
+              }}
+              onFilterByMention={(mention) => {
+                if (onFilterByMention) {
+                  onFilterByMention(mention);
+                } else {
+                  onSearchChange(mention);
+                }
+                setIsMobileSearchOpen(false);
+                setIsSearchOpen(false);
+              }}
+            />
           </div>
         </div>
 
@@ -164,14 +258,20 @@ export function Header({
 
         {/* Right Actions */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Mobile Search Toggle */}
-          <button
-            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            className="md:hidden p-2 sm:p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px] flex items-center justify-center shrink-0"
-            aria-label="Toggle search"
-          >
-            {isMobileSearchOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Search className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </button>
+          {/* Mobile Search Toggle (Magnifying glass button) */}
+          {!isMobileSearchOpen && (
+            <button
+              onClick={() => {
+                setIsMobileSearchOpen(true);
+                setIsSearchOpen(true);
+              }}
+              className="md:hidden p-2 sm:p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-all min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px] flex items-center justify-center shrink-0 cursor-pointer"
+              aria-label="Search"
+              title="Search"
+            >
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          )}
 
           {/* Friends & People Button */}
           {currentUser && (
@@ -338,46 +438,6 @@ export function Header({
           )}
         </div>
       </div>
-
-      {/* Mobile Expandable Search Bar */}
-      {isMobileSearchOpen && (
-        <div className="md:hidden mt-2.5 pt-2.5 border-t border-[#D8D7DE]/60" ref={mobileSearchContainerRef}>
-          <div className="relative">
-            <Search className="w-4 h-4 text-[#777783] absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              autoFocus
-              value={searchQuery}
-              onFocus={() => setIsSearchOpen(true)}
-              onChange={(e) => {
-                onSearchChange(e.target.value);
-                setIsSearchOpen(true);
-              }}
-              placeholder="Search tasks, descriptions, @mentions, users..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-[12px] text-xs bg-[#F4F3F5] border border-transparent focus:border-[var(--color-primary)] focus:bg-[#FFFFFF] focus:outline-none text-[#171923]"
-            />
-
-            {/* Dropdown on mobile */}
-            <SearchDropdown
-              query={searchQuery}
-              tasks={tasks}
-              currentUser={currentUser}
-              isOpen={isSearchOpen}
-              onClose={() => setIsSearchOpen(false)}
-              onSelectTask={onSelectTask}
-              onSelectUser={onSelectUser}
-              onFilterByMention={(mention) => {
-                if (onFilterByMention) {
-                  onFilterByMention(mention);
-                } else {
-                  onSearchChange(mention);
-                }
-                setIsSearchOpen(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </header>
   );
 }
