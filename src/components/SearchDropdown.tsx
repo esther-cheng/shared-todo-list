@@ -79,7 +79,8 @@ export function SearchDropdown({
     const matchTitle = t.title.toLowerCase().includes(cleanQuery);
     const matchDesc = t.description?.toLowerCase().includes(cleanQuery) ?? false;
     const matchSpace = t.space_name?.toLowerCase().includes(cleanQuery) ?? false;
-    return matchTitle || matchDesc || matchSpace;
+    const matchCategory = t.category?.toLowerCase().includes(cleanQuery) ?? false;
+    return matchTitle || matchDesc || matchSpace || matchCategory;
   }).slice(0, 5);
 
   // 2. FILTER MENTIONS

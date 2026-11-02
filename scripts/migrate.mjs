@@ -56,6 +56,7 @@ const migrationFiles = [
   "migrate-friends-spaces.mjs",
   "migrate-notifications.mjs",
   "migrate-web-push.mjs",
+  "migrate-task-categories.mjs",
 ];
 
 for (const file of migrationFiles) {

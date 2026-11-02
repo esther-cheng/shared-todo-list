@@ -3,7 +3,8 @@ import { sql } from "./db";
 import { User } from "@/types";
 
 export const SESSION_COOKIE_NAME = "tandem_session_id";
-const SESSION_DURATION_DAYS = 30;
+export const REMEMBERED_SESSION_DAYS = 60; // 60 days persistent login
+export const STANDARD_SESSION_DAYS = 1;   // 1 day session fallback
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
@@ -14,9 +15,10 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string): Promise<string> {
+export async function createSession(userId: string, rememberMe: boolean = true): Promise<string> {
   const sessionId = "sess_" + crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+  const durationDays = rememberMe ? REMEMBERED_SESSION_DAYS : STANDARD_SESSION_DAYS;
+  const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
   await sql`
     INSERT INTO sessions (id, user_id, expires_at)

@@ -55,7 +55,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { status, description, title, deadline, lead_time_days } = body;
+    const { status, description, title, deadline, lead_time_days, category } = body;
 
     const existing = await sql`SELECT * FROM tasks WHERE id = ${id}`;
     if (existing.length === 0) {
@@ -66,6 +66,7 @@ export async function PATCH(
     const newStatus = status ?? current.status;
     const newTitle = title ?? current.title;
     const newDescription = description !== undefined ? description : current.description;
+    const newCategory = category !== undefined ? category : current.category;
     const newDeadline = deadline !== undefined ? deadline : current.deadline;
     const newLeadTime = lead_time_days !== undefined ? Number(lead_time_days) : current.lead_time_days;
 
@@ -83,6 +84,7 @@ export async function PATCH(
         status = ${newStatus},
         title = ${newTitle},
         description = ${newDescription},
+        category = ${newCategory || null},
         deadline = ${newDeadline ? new Date(newDeadline).toISOString() : null},
         lead_time_days = ${newLeadTime},
         reminder_date = ${newReminderDate ? new Date(newReminderDate).toISOString() : null},

@@ -9,6 +9,8 @@ import {
   isTaskUntouched,
   getUserHighlightStyle
 } from "@/lib/colors";
+import { getCategory } from "@/lib/categories";
+import { formatLeadDuration } from "@/lib/time";
 import { 
   Calendar, 
   Clock, 
@@ -26,6 +28,7 @@ interface TaskCardProps {
 
 export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCardProps) {
   const spaceStyle = getSpaceColor(task.space_color);
+  const categoryObj = getCategory(task.category);
   const userHighlight = getUserHighlightStyle(userColor);
   const isDone = task.status === "completed";
   const untouched = isTaskUntouched(task);
@@ -39,14 +42,23 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
           : "bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[var(--color-primary)] shadow-[0_2px_10px_rgba(23,25,35,0.03)] hover:shadow-[0_4px_18px_rgba(23,25,35,0.06)]"
       } rounded-[18px] p-4 sm:p-5 transition-all duration-150 cursor-pointer active:scale-[0.995]`}
     >
-      {/* Top Meta: Space Pill + Author + Untouched Alert */}
+      {/* Top Meta: Group Pill + Category Badge + Author + Untouched Alert */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[12px] font-semibold border ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder} truncate`}
           >
             {task.space_name || "General"}
           </span>
+
+          {categoryObj && (
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${categoryObj.badgeBg} ${categoryObj.badgeText} ${categoryObj.badgeBorder} truncate`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${categoryObj.dotBg}`} />
+              <span>{categoryObj.label}</span>
+            </span>
+          )}
 
           <span className="text-[12px] text-[#777783] font-normal truncate">
             posted by <span className="text-[#171923] font-medium">{task.created_by}</span>
@@ -97,6 +109,12 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
               {task.description}
             </p>
           )}
+
+          {categoryObj && !isDone && (
+            <p className="mt-1.5 text-[11px] text-[#777783] italic flex items-center gap-1">
+              <span>{categoryObj.reminderPrompt}</span>
+            </p>
+          )}
         </div>
       </div>
 
@@ -114,15 +132,15 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
             </div>
           )}
 
-          {/* Lead-Time Duration & Recommended Start Window */}
+          {/* Estimated Time Needed & Calculated Start Date */}
           {task.lead_time_days > 0 && task.reminder_date && (
             <div className={`hidden xs:flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] ${userHighlight.bgLight} ${userHighlight.textDark} font-medium border ${userHighlight.border} tabular-numbers`}>
               <Clock className={`w-3.5 h-3.5 ${userHighlight.textDark}`} />
               <span>
-                {task.lead_time_days >= 7 ? `${Math.round(task.lead_time_days / 7)}w` : `${task.lead_time_days}d`} prep time
+                Start {formatLeadDuration(task.lead_time_days)} ahead
               </span>
               <span className="text-[#777783] font-normal">
-                • Start: {formatDate(task.reminder_date)}
+                • By {formatDate(task.reminder_date)}
               </span>
             </div>
           )}

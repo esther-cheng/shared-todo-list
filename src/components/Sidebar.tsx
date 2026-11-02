@@ -140,7 +140,7 @@ export function Sidebar({
         {friends.length === 0 ? (
           <div className="p-3 text-center rounded-[12px] bg-[#F4F3F5]/60 border border-dashed border-[#D8D7DE] space-y-2">
             <p className="text-[11px] text-[#777783] leading-relaxed">
-              Connect with your partner or friends to share spaces and assign tasks.
+              Connect with your partner, family, or friends to share groups and assign tasks.
             </p>
             <button
               onClick={onOpenFriendsModal}
@@ -191,7 +191,7 @@ export function Sidebar({
                         title={`Add ${friend.name} to ${activeSpace!.name}`}
                         className="opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded-[7px] text-[10px] font-bold bg-[#171923] text-white hover:bg-[#2D313E] transition-all cursor-pointer shadow-2xs"
                       >
-                        + Space
+                        + Group
                       </button>
                     )}
 
@@ -332,16 +332,16 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Shared Spaces Section */}
+      {/* Shared Groups Section */}
       <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-2.5 shadow-[0_2px_10px_rgba(23,25,35,0.02)]">
         <div className="flex items-center justify-between px-3 py-1.5">
           <span className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase">
-            Spaces
+            Groups
           </span>
           <button
             onClick={onOpenCreateSpaceModal}
             className="text-xs text-[#171923] font-semibold flex items-center gap-1 hover:text-[#6B21A8]"
-            title="Create space"
+            title="Create group"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New</span>
@@ -359,7 +359,7 @@ export function Sidebar({
           >
             <div className="flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-[#171923]" />
-              <span>All Spaces</span>
+              <span>All Groups</span>
             </div>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#D8D7DE]/70 text-[#171923] font-bold">
               {filterCounts.all}
@@ -390,7 +390,7 @@ export function Sidebar({
                         e.stopPropagation();
                         onManageSpaceMembers(space);
                       }}
-                      title="Manage space members"
+                      title="Manage group members"
                       className="p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-colors"
                     >
                       <Users className="w-3.5 h-3.5" />

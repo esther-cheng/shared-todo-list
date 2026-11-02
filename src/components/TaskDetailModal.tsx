@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Task, Space } from "@/types";
 import { getSpaceColor, formatDate, getUserAvatarStyle, getUserHighlightStyle } from "@/lib/colors";
-import { X, Clock, Send, Trash2, Check } from "lucide-react";
+import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
+import {
+  TimeUnit,
+  TIME_UNIT_OPTIONS,
+  parseLeadTimeToUnit,
+  calculateTotalDays,
+  formatLeadDurationLong,
+} from "@/lib/time";
+import { X, Clock, Send, Trash2, Check, Tag, Sparkles } from "lucide-react";
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -19,7 +27,7 @@ interface TaskDetailModalProps {
 
 export function TaskDetailModal(props: TaskDetailModalProps) {
   if (!props.task) return null;
-  return <TaskDetailModalContent {...props} task={props.task} />;
+  return <TaskDetailModalContent key={props.task.id} {...props} task={props.task} />;
 }
 
 interface TaskDetailModalContentProps extends Omit<TaskDetailModalProps, "task"> {
@@ -38,8 +46,19 @@ function TaskDetailModalContent({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [deadline, setDeadline] = useState(task.deadline ? task.deadline.slice(0, 10) : "");
-  const [leadTimeDays, setLeadTimeDays] = useState<string | number>(task.lead_time_days ?? 0);
+  const initialLead = parseLeadTimeToUnit(task.lead_time_days ?? 0);
+  const [leadTimeValue, setLeadTimeValue] = useState<string | number>(initialLead.value);
+  const [leadTimeUnit, setLeadTimeUnit] = useState<TimeUnit>(initialLead.unit);
+
+  useEffect(() => {
+    const p = parseLeadTimeToUnit(task.lead_time_days ?? 0);
+    setLeadTimeValue(p.value);
+    setLeadTimeUnit(p.unit);
+  }, [task.lead_time_days]);
+
   const [status, setStatus] = useState<"todo" | "in_progress" | "completed">(task.status);
+  const [category, setCategory] = useState<string | null>(task.category || null);
+  const categoryObj = getCategory(category);
   const [spaceId] = useState(task.space_id);
   const [noteInput, setNoteInput] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -99,25 +118,27 @@ function TaskDetailModalContent({
     return false;
   }) : [];
 
-  const leadTimeNum = leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0;
+  const totalLeadDays = calculateTotalDays(leadTimeValue, leadTimeUnit);
 
   // Calculate estimated start date
   let calculatedStartDate: Date | null = null;
-  if (deadline && leadTimeNum > 0) {
+  if (deadline && totalLeadDays > 0) {
     const d = new Date(deadline);
-    calculatedStartDate = new Date(d.getTime() - leadTimeNum * 24 * 60 * 60 * 1000);
+    calculatedStartDate = new Date(d.getTime() - totalLeadDays * 24 * 60 * 60 * 1000);
   }
 
-  const handleSaveFields = async (overrideLeadTime?: number | unknown) => {
+  const handleSaveFields = async (overrideLeadTime?: number | unknown, overrideCategory?: string | null) => {
     const finalLeadTime = typeof overrideLeadTime === "number"
       ? overrideLeadTime
-      : (leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0);
+      : calculateTotalDays(leadTimeValue, leadTimeUnit);
+    const finalCategory = overrideCategory !== undefined ? overrideCategory : category;
 
     setIsSaving(true);
     try {
       await onUpdateTask({
         title,
         description,
+        category: finalCategory,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         lead_time_days: finalLeadTime,
         status,
@@ -129,17 +150,24 @@ function TaskDetailModalContent({
   };
 
   const handleLeadTimeBlur = () => {
-    const trimmed = typeof leadTimeDays === "string" ? leadTimeDays.trim() : "";
+    const trimmed = typeof leadTimeValue === "string" ? leadTimeValue.trim() : "";
     let finalNum = 0;
-    if (typeof leadTimeDays === "number") {
-      finalNum = Math.max(0, leadTimeDays);
+    if (typeof leadTimeValue === "number") {
+      finalNum = Math.max(0, leadTimeValue);
     } else if (trimmed !== "" && !isNaN(Number(trimmed))) {
       finalNum = Math.max(0, parseInt(trimmed, 10));
     } else {
-      finalNum = 0; // if no number is put in, set it at 0
+      finalNum = 0;
     }
-    setLeadTimeDays(finalNum);
-    handleSaveFields(finalNum);
+    setLeadTimeValue(finalNum);
+    const calculatedDays = calculateTotalDays(finalNum, leadTimeUnit);
+    handleSaveFields(calculatedDays);
+  };
+
+  const handleUnitChange = (newUnit: TimeUnit) => {
+    setLeadTimeUnit(newUnit);
+    const calculatedDays = calculateTotalDays(leadTimeValue, newUnit);
+    handleSaveFields(calculatedDays);
   };
 
   const handleSendNote = async (e: React.FormEvent) => {
@@ -171,6 +199,14 @@ function TaskDetailModalContent({
             >
               {task.space_name}
             </span>
+            {categoryObj && (
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${categoryObj.badgeBg} ${categoryObj.badgeText} ${categoryObj.badgeBorder} truncate`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${categoryObj.dotBg}`} />
+                <span>{categoryObj.label}</span>
+              </span>
+            )}
             <span className="text-[12px] text-[#777783] truncate">
               by <strong className="text-[#171923] font-medium">{task.created_by}</strong>
             </span>
@@ -218,6 +254,83 @@ function TaskDetailModalContent({
             </div>
           </div>
 
+          {/* Category Selector with Prompt Reminders */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase flex items-center gap-1.5">
+                <Tag className="w-3 h-3 text-[#171923]" />
+                <span>Category</span>
+              </label>
+              {category && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategory(null);
+                    handleSaveFields(undefined, null);
+                  }}
+                  className="text-[11px] font-semibold text-[#777783] hover:text-[#FF705B] transition-colors cursor-pointer"
+                >
+                  Clear category
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {TASK_CATEGORIES.map((cat) => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      const next = isSelected ? null : cat.id;
+                      setCategory(next);
+                      handleSaveFields(undefined, next);
+                    }}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#171923] text-white border-[#171923] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#171923] border-[#D8D7DE] hover:bg-[#F4F3F5] hover:border-[#B78AF2]"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : cat.dotBg}`} />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Grayed-out prompt reminders for active category */}
+            {categoryObj && (
+              <div className="p-2.5 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE]/80 text-[#777783] space-y-1.5 animate-in fade-in duration-150">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#171923]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#B78AF2] shrink-0" />
+                  <span>Checklist & estimated time reminders:</span>
+                </div>
+                <p className="text-[11px] text-[#777783] leading-relaxed italic">
+                  {categoryObj.reminderPrompt}
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {categoryObj.hints.map((hint) => (
+                    <button
+                      key={hint}
+                      type="button"
+                      onClick={() => {
+                        const newDesc = description ? `${description}\n• ${hint}` : `• ${hint}`;
+                        setDescription(newDesc);
+                        onUpdateTask({ description: newDesc });
+                      }}
+                      title="Click to add to notes"
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#FFFFFF] border border-[#D8D7DE] text-[#777783] hover:text-[#171923] hover:border-[#171923] transition-colors cursor-pointer"
+                    >
+                      + {hint}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Title & Description Fields */}
           <div className="space-y-3">
             <div>
@@ -248,12 +361,12 @@ function TaskDetailModalContent({
             </div>
           </div>
 
-          {/* Timeline & Prep Time */}
+          {/* Timeline & Estimated Time Needed */}
           <div className="p-3.5 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE]/70 space-y-2.5">
             <div className="flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-[#171923]" />
               <h4 className="text-[12px] font-semibold text-[#171923]">
-                Timeline & Prep Time
+                Timeline & Estimated Time
               </h4>
             </div>
 
@@ -273,30 +386,41 @@ function TaskDetailModalContent({
 
               <div>
                 <label className="text-[11px] text-[#777783] font-medium block mb-1">
-                  Prep Time (Days)
+                  Estimated Time Needed
                 </label>
-                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="0"
                     step="1"
-                    value={leadTimeDays}
-                    onChange={(e) => setLeadTimeDays(e.target.value)}
+                    value={leadTimeValue}
+                    onChange={(e) => setLeadTimeValue(e.target.value)}
                     onBlur={handleLeadTimeBlur}
                     placeholder="0"
-                    className="flex-1 min-w-[70px] text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:outline-none text-[#171923] min-h-[38px]"
+                    className="w-24 text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px]"
                   />
-                  <span className="text-[11px] text-[#777783] shrink-0 font-medium px-2 py-1 rounded-[6px] bg-white border border-[#D8D7DE]">
-                    {leadTimeNum >= 7 ? `≈ ${(leadTimeNum / 7).toFixed(1)}w` : `${leadTimeNum}d`}
-                  </span>
+                  <select
+                    value={leadTimeUnit}
+                    onChange={(e) => handleUnitChange(e.target.value as TimeUnit)}
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-[8px] bg-white border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px] font-medium cursor-pointer"
+                  >
+                    {TIME_UNIT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                <span className="text-[10px] text-[#777783] mt-1 block">
+                  How much lead time needed to start before deadline
+                </span>
               </div>
             </div>
 
             {calculatedStartDate && (
               <div className={`p-2.5 rounded-[8px] bg-white border ${userHighlight.border} text-[11px] text-[#171923] leading-relaxed`}>
-                <span className={`font-semibold ${userHighlight.textDark}`}>Start window: </span>
-                Begin work by <strong className={`font-semibold ${userHighlight.textDark}`}>{formatDate(calculatedStartDate.toISOString())}</strong> to finish before <span className="underline">{formatDate(deadline)}</span>.
+                <span className={`font-semibold ${userHighlight.textDark}`}>Calculated start date: </span>
+                Begin work by <strong className={`font-semibold ${userHighlight.textDark}`}>{formatDate(calculatedStartDate.toISOString())}</strong> ({formatLeadDurationLong(totalLeadDays)} ahead of <span className="underline">{formatDate(deadline)}</span>).
               </div>
             )}
           </div>

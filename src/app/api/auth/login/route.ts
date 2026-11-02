@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { username, password } = body;
+    const { username, password, remember_me = true } = body;
 
     if (!username || !password) {
       return NextResponse.json(
@@ -40,8 +40,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create session
-    const sessionId = await createSession(user.id);
+    // Create session with remember_me option
+    const isRememberMe = Boolean(remember_me);
+    const sessionId = await createSession(user.id, isRememberMe);
 
     const safeUser = {
       id: user.id,
@@ -52,13 +53,24 @@ export async function POST(req: Request) {
     };
 
     const response = NextResponse.json({ user: safeUser });
-    response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
+    const cookieOptions: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: "lax" | "strict" | "none";
+      path: string;
+      maxAge?: number;
+    } = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-    });
+    };
+
+    if (isRememberMe) {
+      cookieOptions.maxAge = 60 * 24 * 60 * 60; // 60 days
+    }
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionId, cookieOptions);
 
     return response;
   } catch (error) {

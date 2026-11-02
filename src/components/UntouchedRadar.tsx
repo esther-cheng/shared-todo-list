@@ -3,6 +3,7 @@
 import React from "react";
 import { Task } from "@/types";
 import { formatRelativeDeadline, getSpaceColor, isTaskUntouched } from "@/lib/colors";
+import { formatLeadDuration } from "@/lib/time";
 import { AlertCircle, Clock, ArrowRight, CheckCircle2 } from "lucide-react";
 
 interface UntouchedRadarProps {
@@ -76,7 +77,7 @@ export function UntouchedRadar({ tasks, onExpandTask }: UntouchedRadarProps) {
                 <div className="mt-2 flex items-center justify-between text-[11px] text-[#777783]">
                   <span className="flex items-center gap-1 font-medium">
                     <Clock className="w-3.5 h-3.5 text-[#FF705B]" />
-                    {task.lead_time_days || 0}d prep time
+                    Start {formatLeadDuration(task.lead_time_days)} ahead
                   </span>
 
                   <span className="flex items-center gap-1 text-[#C2410C] font-semibold group-hover:underline">

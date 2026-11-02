@@ -3,7 +3,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Space } from "@/types";
 import { formatDate, getUserHighlightStyle, getSpaceColor } from "@/lib/colors";
-import { X, Clock, Calendar, Plus, ChevronDown, Check, Loader2 } from "lucide-react";
+import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
+import {
+  TimeUnit,
+  TIME_UNIT_OPTIONS,
+  parseLeadTimeToUnit,
+  calculateTotalDays,
+  formatLeadDurationLong,
+} from "@/lib/time";
+import { X, Clock, Calendar, Plus, ChevronDown, Check, Loader2, Tag, Sparkles } from "lucide-react";
 
 interface CreateTaskModalProps {
   spaces: Space[];
@@ -15,6 +23,7 @@ interface CreateTaskModalProps {
     title: string;
     description: string;
     space_id: string;
+    category?: string | null;
     deadline: string | null;
     lead_time_days: number;
     created_by: string;
@@ -48,8 +57,10 @@ export function CreateTaskModal({
     setAvailableSpaces(spaces);
   }, [spaces]);
 
-  const [title, setTitle] = useState(() => draftLoaded?.title || "");
-  const [description, setDescription] = useState(() => draftLoaded?.description || "");
+  const [title, setTitle] = useState<string>(() => draftLoaded?.title || "");
+  const [description, setDescription] = useState<string>(() => draftLoaded?.description || "");
+  const [category, setCategory] = useState<string>(() => draftLoaded?.category || "shopping");
+  const selectedCategoryObj = getCategory(category);
   const [spaceId, setSpaceId] = useState(() => {
     if (draftLoaded?.spaceId && spaces.some((s) => s.id === draftLoaded.spaceId)) {
       return draftLoaded.spaceId;
@@ -129,9 +140,22 @@ export function CreateTaskModal({
     }
   };
   const [deadline, setDeadline] = useState(() => draftLoaded?.deadline || "");
-  const [leadTimeDays, setLeadTimeDays] = useState<string | number>(() => draftLoaded?.leadTimeDays ?? 0);
+
+  const initialLead = draftLoaded?.leadTimeUnit
+    ? { value: draftLoaded.leadTimeValue ?? 0, unit: (draftLoaded.leadTimeUnit as TimeUnit) || "days" }
+    : parseLeadTimeToUnit(draftLoaded?.leadTimeDays ?? 0);
+
+  const [leadTimeValue, setLeadTimeValue] = useState<string | number>(() => initialLead.value);
+  const [leadTimeUnit, setLeadTimeUnit] = useState<TimeUnit>(() => initialLead.unit);
+
+  const totalLeadDays = calculateTotalDays(leadTimeValue, leadTimeUnit);
+
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => Boolean(
-    draftLoaded?.title || draftLoaded?.description || draftLoaded?.deadline || draftLoaded?.leadTimeDays
+    draftLoaded?.title ||
+    draftLoaded?.description ||
+    draftLoaded?.deadline ||
+    (draftLoaded?.leadTimeDays && draftLoaded.leadTimeDays > 0) ||
+    (draftLoaded?.leadTimeValue && Number(draftLoaded.leadTimeValue) > 0)
   ));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -139,7 +163,7 @@ export function CreateTaskModal({
   useEffect(() => {
     const key = `tandem_task_draft_${currentUser || "default"}`;
     const hasContent = Boolean(
-      title.trim() || description.trim() || deadline || Number(leadTimeDays) > 0
+      title.trim() || description.trim() || deadline || totalLeadDays > 0 || category
     );
 
     try {
@@ -150,8 +174,11 @@ export function CreateTaskModal({
             title,
             description,
             spaceId,
+            category,
             deadline,
-            leadTimeDays,
+            leadTimeValue,
+            leadTimeUnit,
+            leadTimeDays: totalLeadDays,
           })
         );
       } else {
@@ -160,7 +187,7 @@ export function CreateTaskModal({
     } catch (e) {
       console.error("Failed to sync task draft:", e);
     }
-  }, [title, description, spaceId, deadline, leadTimeDays, currentUser]);
+  }, [title, description, spaceId, category, deadline, leadTimeValue, leadTimeUnit, totalLeadDays, currentUser]);
 
   const handleClearDraft = () => {
     try {
@@ -170,18 +197,18 @@ export function CreateTaskModal({
     }
     setTitle("");
     setDescription("");
+    setCategory("shopping");
     setDeadline("");
-    setLeadTimeDays(0);
+    setLeadTimeValue(0);
+    setLeadTimeUnit("days");
     setSpaceId(defaultSpaceId || spaces[0]?.id || "");
     setHasRestoredDraft(false);
   };
 
-  const leadTimeNum = leadTimeDays === "" ? 0 : Number(leadTimeDays) || 0;
-
   let calculatedReminderDate: Date | null = null;
-  if (deadline && leadTimeNum > 0) {
+  if (deadline && totalLeadDays > 0) {
     const d = new Date(deadline);
-    calculatedReminderDate = new Date(d.getTime() - leadTimeNum * 24 * 60 * 60 * 1000);
+    calculatedReminderDate = new Date(d.getTime() - totalLeadDays * 24 * 60 * 60 * 1000);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,8 +221,9 @@ export function CreateTaskModal({
         title,
         description,
         space_id: spaceId,
+        category: category || null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
-        lead_time_days: leadTimeNum,
+        lead_time_days: totalLeadDays,
         created_by: currentUser,
       });
       try {
@@ -225,7 +253,7 @@ export function CreateTaskModal({
               New task
             </h3>
             <p className="text-[11px] text-[#777783]">
-              Shared with space members
+              Shared with group members
             </p>
           </div>
 
@@ -253,10 +281,10 @@ export function CreateTaskModal({
         )}
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
-          {/* Space Selector with Inline Create */}
+          {/* Space / Group Selector with Inline Create */}
           <div className="relative" ref={spaceContainerRef}>
             <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 block">
-              Space
+              Group
             </label>
             <div className="relative flex items-center">
               {selectedSpace && (
@@ -290,7 +318,7 @@ export function CreateTaskModal({
                     if (selectedSpace) setSpaceSearchQuery(selectedSpace.name);
                   }
                 }}
-                placeholder="Search or enter space name..."
+                placeholder="Search or enter group name..."
                 className={`w-full text-xs font-semibold ${
                   selectedSpace ? "pl-8" : "pl-3"
                 } pr-8 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[40px]`}
@@ -300,13 +328,13 @@ export function CreateTaskModal({
                 onClick={() => setIsSpaceDropdownOpen((prev) => !prev)}
                 className="absolute right-2 p-1 text-[#777783] hover:text-[#171923] cursor-pointer"
                 tabIndex={-1}
-                aria-label="Toggle space dropdown"
+                aria-label="Toggle group dropdown"
               >
                 <ChevronDown className={`w-4 h-4 transition-transform ${isSpaceDropdownOpen ? "rotate-180" : ""}`} />
               </button>
             </div>
 
-            {/* Space Dropdown Popover */}
+            {/* Group Dropdown Popover */}
             {isSpaceDropdownOpen && (
               <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#FFFFFF] rounded-[14px] border border-[#D8D7DE] shadow-[0_10px_32px_rgba(23,25,35,0.12)] p-1.5 z-50 max-h-56 overflow-y-auto space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
                 {filteredSpaces.map((s) => {
@@ -355,16 +383,85 @@ export function CreateTaskModal({
                       {cleanQuery}
                     </span>
                     <span className="ml-auto text-[10px] text-[#777783] group-hover:text-[#6B21A8] font-normal shrink-0">
-                      Create space
+                      Create group
                     </span>
                   </button>
                 )}
 
                 {filteredSpaces.length === 0 && !canCreateOption && (
                   <div className="p-3 text-center text-[#777783] text-[11px]">
-                    No spaces available. Type a name to create one.
+                    No groups available. Type a name to create one.
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Category Selector & Reminder Prompts */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase flex items-center gap-1.5">
+                <Tag className="w-3 h-3 text-[#171923]" />
+                <span>Category</span>
+              </label>
+              {category && (
+                <button
+                  type="button"
+                  onClick={() => setCategory("")}
+                  className="text-[11px] font-semibold text-[#777783] hover:text-[#FF705B] transition-colors cursor-pointer"
+                >
+                  Clear category
+                </button>
+              )}
+            </div>
+
+            {/* Category Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {TASK_CATEGORIES.map((cat) => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCategory(isSelected ? "" : cat.id)}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#171923] text-white border-[#171923] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#171923] border-[#D8D7DE] hover:bg-[#F4F3F5] hover:border-[#B78AF2]"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : cat.dotBg}`} />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Grayed-out prompt reminders for the active category */}
+            {selectedCategoryObj && (
+              <div className="p-2.5 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE]/80 text-[#777783] space-y-1.5 animate-in fade-in duration-150">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#171923]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#B78AF2] shrink-0" />
+                  <span>Checklist & estimated time reminders:</span>
+                </div>
+                <p className="text-[11px] text-[#777783] leading-relaxed italic">
+                  {selectedCategoryObj.reminderPrompt}
+                </p>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {selectedCategoryObj.hints.map((hint) => (
+                    <button
+                      key={hint}
+                      type="button"
+                      onClick={() => {
+                        setDescription((prev: string) => (prev ? `${prev}\n• ${hint}` : `• ${hint}`));
+                      }}
+                      title="Click to add to notes"
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#FFFFFF] border border-[#D8D7DE] text-[#777783] hover:text-[#171923] hover:border-[#171923] transition-colors cursor-pointer"
+                    >
+                      + {hint}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -398,7 +495,7 @@ export function CreateTaskModal({
             />
           </div>
 
-          {/* Target Deadline & Prep Time */}
+          {/* Target Deadline & Estimated Time Needed */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
             <div>
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 flex items-center gap-1">
@@ -416,42 +513,53 @@ export function CreateTaskModal({
             <div>
               <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-[#777783]" />
-                Prep Time (Days)
+                Estimated Time Needed
               </label>
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
                   step="1"
                   placeholder="0"
-                  value={leadTimeDays}
-                  onChange={(e) => setLeadTimeDays(e.target.value)}
+                  value={leadTimeValue}
+                  onChange={(e) => setLeadTimeValue(e.target.value)}
                   onBlur={() => {
-                    const trimmed = typeof leadTimeDays === "string" ? leadTimeDays.trim() : "";
+                    const trimmed = typeof leadTimeValue === "string" ? leadTimeValue.trim() : "";
                     let finalNum = 0;
-                    if (typeof leadTimeDays === "number") {
-                      finalNum = Math.max(0, leadTimeDays);
+                    if (typeof leadTimeValue === "number") {
+                      finalNum = Math.max(0, leadTimeValue);
                     } else if (trimmed !== "" && !isNaN(Number(trimmed))) {
                       finalNum = Math.max(0, parseInt(trimmed, 10));
                     } else {
                       finalNum = 0;
                     }
-                    setLeadTimeDays(finalNum);
+                    setLeadTimeValue(finalNum);
                   }}
-                  className="flex-1 min-w-[70px] text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px]"
+                  className="w-24 text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px]"
                 />
-                <span className="text-[11px] text-[#777783] shrink-0 font-medium px-2 py-1 rounded-[6px] bg-[#F4F3F5] border border-[#D8D7DE]">
-                  {leadTimeNum >= 7 ? `≈ ${(leadTimeNum / 7).toFixed(1)}w` : `${leadTimeNum}d`}
-                </span>
+                <select
+                  value={leadTimeUnit}
+                  onChange={(e) => setLeadTimeUnit(e.target.value as TimeUnit)}
+                  className="flex-1 text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px] font-medium cursor-pointer"
+                >
+                  {TIME_UNIT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
+              <span className="text-[10px] text-[#777783] mt-1 block">
+                How much lead time needed to start before the deadline
+              </span>
             </div>
           </div>
 
-          {/* Dynamic Reminder Alert */}
+          {/* Dynamic Calculated Start Date */}
           {calculatedReminderDate && (
             <div className={`p-2.5 rounded-[10px] ${userHighlight.bgLight} text-[11px] ${userHighlight.textDark} border ${userHighlight.border} leading-relaxed`}>
-              <span className="font-semibold">Start reminder: </span>
-              Surfaces on <strong className="font-semibold">{formatDate(calculatedReminderDate.toISOString())}</strong>.
+              <span className="font-semibold">Calculated start date: </span>
+              Begin working by <strong className="font-semibold">{formatDate(calculatedReminderDate.toISOString())}</strong> ({formatLeadDurationLong(totalLeadDays)} ahead of deadline).
             </div>
           )}
 

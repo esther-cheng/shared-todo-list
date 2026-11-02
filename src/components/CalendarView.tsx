@@ -9,6 +9,7 @@ import {
   getUserHighlightStyle,
   isTaskUntouched
 } from "@/lib/colors";
+import { formatLeadDuration } from "@/lib/time";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -389,7 +390,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
 
                             {task.lead_time_days > 0 && (
                               <span className="text-[10px] font-medium text-[#777783] dark:text-zinc-400 bg-[#F4F3F5] dark:bg-zinc-700/60 px-2 py-0.5 rounded-full">
-                                {task.lead_time_days}d lead time
+                                {formatLeadDuration(task.lead_time_days)} lead time
                               </span>
                             )}
                           </div>
@@ -690,7 +691,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                                     </span>
                                     {task.lead_time_days > 0 && (
                                       <span className="text-[9px] font-medium text-[#777783] dark:text-zinc-400">
-                                        {task.lead_time_days}d lead
+                                        {formatLeadDuration(task.lead_time_days)} lead
                                       </span>
                                     )}
                                   </div>
@@ -800,7 +801,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
                               </span>
                               {task.lead_time_days > 0 && (
                                 <span className="text-[10px] font-medium text-[#777783] dark:text-zinc-400 bg-[#F4F3F5] dark:bg-zinc-700/60 px-2 py-0.5 rounded-full">
-                                  {task.lead_time_days}d lead time
+                                  {formatLeadDuration(task.lead_time_days)} lead time
                                 </span>
                               )}
                             </div>

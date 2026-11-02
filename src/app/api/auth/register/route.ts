@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const user = insertResult[0];
 
     // Create session
-    const sessionId = await createSession(userId);
+    const sessionId = await createSession(userId, true);
 
     const response = NextResponse.json({ user });
     response.cookies.set(SESSION_COOKIE_NAME, sessionId, {
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: 60 * 24 * 60 * 60, // 60 days
     });
 
     return response;

@@ -18,7 +18,7 @@ const grandHotel = Grand_Hotel({
 
 export const metadata: Metadata = {
   title: "Tandem • Life's better in sync.",
-  description: "Life's better in sync. A warm, collaborative shared space with lead-time reminders, notes, and task radar.",
+  description: "Life's better in sync. A warm, collaborative shared group workspace with lead-time reminders, notes, and task radar.",
 };
 
 export const viewport: Viewport = {

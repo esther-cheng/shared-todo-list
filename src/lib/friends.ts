@@ -93,6 +93,6 @@ export async function canAddUserToSpace(
 
   return {
     allowed: false,
-    reason: `@${target.username} has a private profile. You can only add them to spaces if you are friends.`,
+    reason: `@${target.username} has a private profile. You can only add them to groups if you are friends.`,
   };
 }

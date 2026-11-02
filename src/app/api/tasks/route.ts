@@ -24,6 +24,7 @@ export async function GET(req: Request) {
         t.space_id,
         t.title,
         t.description,
+        t.category,
         t.deadline,
         t.lead_time_days,
         t.reminder_date,
@@ -121,6 +122,7 @@ export async function POST(req: Request) {
       space_id,
       title,
       description = "",
+      category = null,
       deadline = null,
       lead_time_days = 0,
       created_by = user.name,
@@ -143,13 +145,14 @@ export async function POST(req: Request) {
 
     const result = await sql`
       INSERT INTO tasks (
-        id, space_id, title, description, deadline, lead_time_days, reminder_date, status, created_by, last_activity_at
+        id, space_id, title, description, category, deadline, lead_time_days, reminder_date, status, created_by, last_activity_at
       )
       VALUES (
         ${id},
         ${space_id},
         ${title},
         ${description},
+        ${category || null},
         ${deadline ? new Date(deadline).toISOString() : null},
         ${Number(lead_time_days)},
         ${reminder_date ? new Date(reminder_date).toISOString() : null},

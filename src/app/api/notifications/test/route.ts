@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     }
 
     const title = channel === "push" ? "Tandem Web Push Test" : "Tandem Email Notification Test";
-    const message = `Hello ${user.name}! Your ${channel === "push" ? "browser push" : "email"} alerts are active and ready to deliver task reminders, prep window alerts, and mentions.`;
+    const message = `Hello ${user.name}! Your ${channel === "push" ? "browser push" : "email"} alerts are active and ready to deliver task reminders, start window alerts, and mentions.`;
 
     const result = await dispatchNotification({
       userId: user.id,

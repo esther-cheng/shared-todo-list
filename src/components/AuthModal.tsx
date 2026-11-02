@@ -11,7 +11,13 @@ interface AuthModalProps {
 
 export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [username, setUsername] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [username, setUsername] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("tandem_remembered_username") || "";
+    }
+    return "";
+  });
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +42,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       const endpoint = isSignUp ? "/api/auth/register" : "/api/auth/login";
       const payload = isSignUp
         ? { username, name, password, avatar_color: avatarColor }
-        : { username, password };
+        : { username, password, remember_me: rememberMe };
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -48,6 +54,14 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
       if (!res.ok || data.error) {
         throw new Error(data.error || "Authentication failed");
+      }
+
+      if (!isSignUp) {
+        if (rememberMe) {
+          localStorage.setItem("tandem_remembered_username", username.trim());
+        } else {
+          localStorage.removeItem("tandem_remembered_username");
+        }
       }
 
       onSuccess(data.user);
@@ -193,6 +207,22 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </button>
             </div>
           </div>
+
+          {/* Remember Me Checkbox on Sign In */}
+          {!isSignUp && (
+            <div className="flex items-center justify-between pt-0.5">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded-[4px] border-[#D8D7DE] text-[#171923] focus:ring-[#B78AF2] accent-[#171923] cursor-pointer"
+                />
+                <span className="text-[12px] font-medium text-[#171923]">Remember me</span>
+              </label>
+              <span className="text-[11px] text-[#777783]">Stay signed in</span>
+            </div>
+          )}
 
           {/* Color picker on signup */}
           {isSignUp && (

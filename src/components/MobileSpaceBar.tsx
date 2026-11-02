@@ -30,7 +30,7 @@ export function MobileSpaceBar({
   const userHighlight = getUserHighlightStyle(userColor);
   return (
     <div className="lg:hidden w-full overflow-x-auto no-scrollbar py-2.5 px-4 flex items-center gap-2 border-b border-[#D8D7DE] bg-[#FFFFFF]">
-      {/* All Spaces */}
+      {/* All Spaces / Groups */}
       <button
         onClick={() => {
           onSelectSpace("all");
@@ -42,7 +42,7 @@ export function MobileSpaceBar({
             : "bg-[#F4F3F5] text-[#171923] hover:bg-[#EAE8ED]"
         }`}
       >
-        <span>All spaces</span>
+        <span>All groups</span>
         <span
           className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
             selectedSpaceId === "all" && activeFilter === "all"

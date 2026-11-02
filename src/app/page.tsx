@@ -19,7 +19,8 @@ import { WelcomeView } from "@/components/WelcomeView";
 import { FriendsModal } from "@/components/FriendsModal";
 import { SpaceMembersModal } from "@/components/SpaceMembersModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
-import { Loader2, CheckSquare, Users, X, AtSign } from "lucide-react";
+import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
+import { Loader2, CheckSquare, Users, X, AtSign, Tag } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -47,6 +48,7 @@ export default function HomePage() {
   const [activeFilter, setActiveFilter] = useState<"all" | "tagged" | "radar">("all");
   const [selectedFriend, setSelectedFriend] = useState<SearchedUser | null>(null);
   const [selectedCommentTag, setSelectedCommentTag] = useState<string | null>(null);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [friendsData, setFriendsData] = useState<FriendsData>({
     friends: [],
@@ -306,6 +308,7 @@ export default function HomePage() {
     title: string;
     description: string;
     space_id: string;
+    category?: string | null;
     deadline: string | null;
     lead_time_days: number;
     created_by: string;
@@ -396,6 +399,11 @@ export default function HomePage() {
       return false;
     }
 
+    // Category filter
+    if (selectedCategoryFilter) {
+      if (t.category !== selectedCategoryFilter) return false;
+    }
+
     // Friend filter
     if (selectedFriend) {
       const isTagged = isTaskTaggedForUser(t, selectedFriend.username);
@@ -423,13 +431,14 @@ export default function HomePage() {
       const matchTitle = t.title.toLowerCase().includes(q);
       const matchDesc = t.description?.toLowerCase().includes(q) ?? false;
       const matchSpace = t.space_name?.toLowerCase().includes(q) ?? false;
+      const matchCategory = t.category?.toLowerCase().includes(q) ?? false;
       const matchTaggedUser = t.tagged_users?.some((u) => {
         if (!u || typeof u !== "string") return false;
         const uLower = u.toLowerCase();
         const uClean = uLower.replace(/^@/, "");
         return uLower.includes(q) || uClean.includes(qClean);
       }) ?? false;
-      if (!matchTitle && !matchDesc && !matchSpace && !matchTaggedUser) return false;
+      if (!matchTitle && !matchDesc && !matchSpace && !matchCategory && !matchTaggedUser) return false;
     }
 
     // Special focus filter
@@ -586,11 +595,11 @@ export default function HomePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-[#171923] text-[14px]">
                   {selectedSpaceId === "all"
-                    ? "All spaces"
+                    ? "All groups"
                     : spaces.find((s) => s.id === selectedSpaceId)?.name}
                 </span>
 
-                {/* Specific space members manage button */}
+                {/* Specific space/group members manage button */}
                 {selectedSpaceId !== "all" && (() => {
                   const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
                   if (!currentSpace) return null;
@@ -599,7 +608,7 @@ export default function HomePage() {
                     <button
                       onClick={() => setSelectedSpaceForMembers(currentSpace)}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] text-xs font-semibold text-[#171923] transition-all cursor-pointer shadow-xs"
-                      title="Manage space members"
+                      title="Manage group members"
                     >
                       <Users className="w-3.5 h-3.5 text-[#171923]" />
                       <span>
@@ -644,10 +653,62 @@ export default function HomePage() {
                     </button>
                   </span>
                 )}
+
+                {/* Category Active Filter Badge */}
+                {selectedCategoryFilter && (() => {
+                  const cat = getCategory(selectedCategoryFilter);
+                  return (
+                    <span className={`font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 shadow-2xs border ${cat?.badgeBg || "bg-[#F4F3F5]"} ${cat?.badgeText || "text-[#171923]"} ${cat?.badgeBorder || "border-[#D8D7DE]"}`}>
+                      <Tag className="w-3 h-3" />
+                      <span>{cat?.label || selectedCategoryFilter}</span>
+                      <button
+                        onClick={() => setSelectedCategoryFilter(null)}
+                        className="hover:text-[#FF705B] cursor-pointer"
+                        title="Clear category filter"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })()}
+
                 <span className="text-[#777783] font-normal">
                   ({filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"})
                 </span>
               </div>
+            </div>
+
+            {/* Quick Category Filter Bar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 px-1 no-scrollbar text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter(null)}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                  !selectedCategoryFilter
+                    ? "bg-[#171923] text-white border-[#171923] shadow-xs"
+                    : "bg-[#FFFFFF] text-[#777783] border-[#D8D7DE] hover:bg-[#F4F3F5] hover:text-[#171923]"
+                }`}
+              >
+                All categories
+              </button>
+              {TASK_CATEGORIES.map((cat) => {
+                const isSelected = selectedCategoryFilter === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategoryFilter(isSelected ? null : cat.id)}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#171923] text-white border-[#171923] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#171923] border-[#D8D7DE] hover:bg-[#F4F3F5] hover:border-[#B78AF2]"
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : cat.dotBg}`} />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Tagged in Comments Filter Pills */}

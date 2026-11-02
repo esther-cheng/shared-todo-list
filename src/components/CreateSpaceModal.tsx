@@ -122,7 +122,7 @@ export function CreateSpaceModal({ onClose, onCreateSpace }: CreateSpaceModalPro
       if (err instanceof Error) {
         setErrorMessage(err.message);
       } else {
-        setErrorMessage("Failed to create space");
+        setErrorMessage("Failed to create group");
       }
     } finally {
       setIsSubmitting(false);
@@ -142,7 +142,7 @@ export function CreateSpaceModal({ onClose, onCreateSpace }: CreateSpaceModalPro
         <div className="sticky top-0 z-20 bg-[#FFFFFF] flex items-center justify-between px-5 py-3.5 border-b border-[#D8D7DE] shrink-0">
           <h3 className="font-semibold text-[16px] text-[#171923] flex items-center gap-2">
             <FolderPlus className="w-4 h-4 text-[#171923]" />
-            New space
+            New group
           </h3>
           <button
             onClick={onClose}
@@ -160,15 +160,15 @@ export function CreateSpaceModal({ onClose, onCreateSpace }: CreateSpaceModalPro
             </div>
           )}
 
-          {/* Space Name Input */}
+          {/* Group Name Input */}
           <div>
             <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 block">
-              Space Name
+              Group Name
             </label>
             <input
               type="text"
               required
-              placeholder="e.g. Wedding, Travel, Groceries"
+              placeholder="e.g. Smith Family, CB Soccer Team, Book Club"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full text-xs px-3.5 py-2.5 rounded-[12px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[42px]"
@@ -389,7 +389,7 @@ export function CreateSpaceModal({ onClose, onCreateSpace }: CreateSpaceModalPro
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${previewColor.badgeBg} ${previewColor.badgeText} ${previewColor.badgeBorder}`}
             >
               <SelectedIconComponent className="w-3.5 h-3.5" />
-              <span>{name.trim() || "Space Name"}</span>
+              <span>{name.trim() || "Group Name"}</span>
             </span>
           </div>
 
@@ -406,7 +406,7 @@ export function CreateSpaceModal({ onClose, onCreateSpace }: CreateSpaceModalPro
               disabled={isSubmitting || !name.trim()}
               className="px-5 py-2 rounded-[10px] text-xs font-semibold text-white bg-[#171923] hover:bg-[#2D313E] disabled:opacity-50 transition-all cursor-pointer shadow-xs"
             >
-              {isSubmitting ? "Creating..." : "Create space"}
+              {isSubmitting ? "Creating..." : "Create group"}
             </button>
           </div>
         </form>

@@ -771,10 +771,10 @@ export function NotificationSettingsTab({ user }: NotificationSettingsTabProps) 
               </div>
               <div>
                 <span className="block font-semibold text-[13px] text-[#171923]">
-                  Prep Time & Start Windows
+                  Estimated Time & Start Reminders
                 </span>
                 <span className="block text-[11px] text-[#777783] leading-snug">
-                  Alert when a multi-week task reaches its calculated work kickoff window.
+                  Alert when it&apos;s time to start a task, calculated from your deadline and estimated time needed.
                 </span>
               </div>
             </div>
@@ -784,7 +784,7 @@ export function NotificationSettingsTab({ user }: NotificationSettingsTabProps) 
                 setNotifyPrepWindow(checked);
                 handleSavePreferences({ notify_prep_window: checked });
               }}
-              label="Toggle prep window alerts"
+              label="Toggle start reminder alerts"
             />
           </div>
 
@@ -821,10 +821,10 @@ export function NotificationSettingsTab({ user }: NotificationSettingsTabProps) 
               </div>
               <div>
                 <span className="block font-semibold text-[13px] text-[#171923]">
-                  Shared Spaces & Collaborators
+                  Shared Groups & Collaborators
                 </span>
                 <span className="block text-[11px] text-[#777783] leading-snug">
-                  Notify when someone invites you to join a space or accepts your connection.
+                  Notify when someone invites you to join a group or accepts your connection.
                 </span>
               </div>
             </div>
@@ -834,7 +834,7 @@ export function NotificationSettingsTab({ user }: NotificationSettingsTabProps) 
                 setNotifySpaceInvite(checked);
                 handleSavePreferences({ notify_space_invite: checked });
               }}
-              label="Toggle shared space alerts"
+              label="Toggle shared group alerts"
             />
           </div>
 

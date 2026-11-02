@@ -3,6 +3,8 @@
 import React from "react";
 import { Task } from "@/types";
 import { getSpaceColor, formatDate, formatRelativeDeadline, isTaskUntouched } from "@/lib/colors";
+import { getCategory } from "@/lib/categories";
+import { formatLeadDuration, formatLeadDurationLong } from "@/lib/time";
 import { Check, Circle, Clock, MessageSquare, AlertTriangle, ChevronRight } from "lucide-react";
 
 interface ListViewProps {
@@ -27,6 +29,7 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
         {tasks.map((task) => {
           const isDone = task.status === "completed";
           const spaceStyle = getSpaceColor(task.space_color);
+          const categoryObj = getCategory(task.category);
           const untouched = isTaskUntouched(task);
 
           return (
@@ -62,12 +65,19 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                 </button>
 
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border truncate ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
                     >
                       {task.space_name}
                     </span>
+                    {categoryObj && (
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.2 rounded-full border truncate ${categoryObj.badgeBg} ${categoryObj.badgeText} ${categoryObj.badgeBorder}`}
+                      >
+                        {categoryObj.label}
+                      </span>
+                    )}
                     {untouched && (
                       <span 
                         title="Action needed: upcoming deadline / work window active"
@@ -108,9 +118,9 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
             <tr className="bg-[#F4F3F5] border-b border-[#D8D7DE] text-[#777783] text-[11px] font-bold uppercase tracking-wider select-none">
               <th className="py-2.5 px-3 w-10 text-center"></th>
               <th className="py-2.5 px-3 min-w-[220px]">Task</th>
-              <th className="py-2.5 px-3">Space</th>
+              <th className="py-2.5 px-3">Group</th>
               <th className="py-2.5 px-3">Target Deadline</th>
-              <th className="py-2.5 px-3">Prep Time</th>
+              <th className="py-2.5 px-3">Estimated Time</th>
               <th className="py-2.5 px-3">Notes</th>
               <th className="py-2.5 px-3">Author</th>
             </tr>
@@ -119,6 +129,7 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
             {tasks.map((task) => {
               const isDone = task.status === "completed";
               const spaceStyle = getSpaceColor(task.space_color);
+              const categoryObj = getCategory(task.category);
               const untouched = isTaskUntouched(task);
 
               return (
@@ -180,13 +191,23 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                     </div>
                   </td>
 
-                  {/* Column 3: Space Badge */}
+                  {/* Column 3: Group & Category Badge */}
                   <td className={`py-3 px-3 ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border truncate max-w-[140px] ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
-                    >
-                      {task.space_name}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border truncate max-w-[140px] ${spaceStyle.badgeBg} ${spaceStyle.badgeText} ${spaceStyle.badgeBorder}`}
+                      >
+                        {task.space_name}
+                      </span>
+                      {categoryObj && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border truncate max-w-[140px] ${categoryObj.badgeBg} ${categoryObj.badgeText} ${categoryObj.badgeBorder}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${categoryObj.dotBg}`} />
+                          <span>{categoryObj.label}</span>
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Column 4: Target Deadline */}
@@ -203,12 +224,12 @@ export function ListView({ tasks, onExpandTask, onToggleStatus }: ListViewProps)
                     )}
                   </td>
 
-                  {/* Column 5: Prep Time */}
+                  {/* Column 5: Estimated Time Needed */}
                   <td className={`py-3 px-3 text-[#777783] ${untouched ? "border-y-2 border-y-[#FF705B]" : ""}`}>
                     {task.lead_time_days > 0 ? (
-                      <span className="inline-flex items-center gap-1 font-medium text-[#171923]">
+                      <span className="inline-flex items-center gap-1 font-medium text-[#171923]" title={`Start ${formatLeadDurationLong(task.lead_time_days)} ahead of deadline`}>
                         <Clock className="w-3.5 h-3.5 text-[#B78AF2]" />
-                        <span>{task.lead_time_days}d</span>
+                        <span>{formatLeadDuration(task.lead_time_days)} ahead</span>
                       </span>
                     ) : (
                       "—"

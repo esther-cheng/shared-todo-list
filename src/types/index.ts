@@ -112,6 +112,7 @@ export interface Task {
   space_id: string;
   title: string;
   description: string | null;
+  category?: string | null;
   deadline: string | null;
   lead_time_days: number;
   reminder_date: string | null;

@@ -189,7 +189,7 @@ export function FriendsModal({ currentUser, onClose, onFriendsChanged }: Friends
                 Friends & People
               </h2>
               <p className="text-[12px] text-[#777783]">
-                Connect with partners, family, and teammates to share spaces.
+                Connect with partners, family, and teammates to share groups.
               </p>
             </div>
           </div>
@@ -279,7 +279,7 @@ export function FriendsModal({ currentUser, onClose, onFriendsChanged }: Friends
                 <Sparkles className="w-4 h-4 text-[#B78AF2] shrink-0 mt-0.5" />
                 <p className="leading-relaxed">
                   <strong className="text-[#171923] font-semibold">Privacy Policy:</strong>{" "}
-                  Public users can be added directly to any space. Private users must be your friend before they can be added to your spaces.
+                  Public users can be added directly to any group. Private users must be your friend before they can be added to your groups.
                 </p>
               </div>
 
@@ -441,7 +441,7 @@ export function FriendsModal({ currentUser, onClose, onFriendsChanged }: Friends
 
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] font-medium text-[#065F46] bg-[#EFF8F5] px-2 py-1 rounded-[8px] border border-[#CCEBE1] hidden sm:inline">
-                          Eligible for spaces
+                          Eligible for groups
                         </span>
                         <button
                           onClick={() => handleRemoveFriend(friend.id, friend.name)}

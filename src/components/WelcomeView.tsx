@@ -20,7 +20,13 @@ interface WelcomeViewProps {
 
 export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
   const [isSignUp, setIsSignUp] = useState(false);
-  const [username, setUsername] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [username, setUsername] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("tandem_remembered_username") || "";
+    }
+    return "";
+  });
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -45,7 +51,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
       const endpoint = isSignUp ? "/api/auth/register" : "/api/auth/login";
       const payload = isSignUp
         ? { username: username.trim(), name: name.trim(), password, avatar_color: avatarColor }
-        : { username: username.trim(), password };
+        : { username: username.trim(), password, remember_me: rememberMe };
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -57,6 +63,14 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
 
       if (!res.ok || data.error) {
         throw new Error(data.error || "Authentication failed");
+      }
+
+      if (!isSignUp) {
+        if (rememberMe) {
+          localStorage.setItem("tandem_remembered_username", username.trim());
+        } else {
+          localStorage.removeItem("tandem_remembered_username");
+        }
       }
 
       onLoginSuccess(data.user);
@@ -110,9 +124,9 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 <div className="w-8 h-8 rounded-[8px] bg-[#F5EEFD] text-[#6B21A8] flex items-center justify-center">
                   <Users className="w-4 h-4" />
                 </div>
-                <h3 className="text-[14px] font-semibold text-[#171923]">Shared Spaces</h3>
+                <h3 className="text-[14px] font-semibold text-[#171923]">Shared Groups</h3>
                 <p className="text-[12px] text-[#777783] leading-normal">
-                  House, travel, wedding, or finances. Color-coded walls with social feeds.
+                  Families, sports teams, clubs, or roommates. Color-coded walls with social feeds.
                 </p>
               </div>
 
@@ -122,7 +136,7 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                 </div>
                 <h3 className="text-[14px] font-semibold text-[#171923]">Long-Horizon Planning</h3>
                 <p className="text-[12px] text-[#777783] leading-normal">
-                  Set deadlines months or years out with built-in prep time.
+                  Set deadlines months or years out and calculate exactly when you need to start.
                 </p>
               </div>
 
@@ -260,6 +274,22 @@ export function WelcomeView({ onLoginSuccess }: WelcomeViewProps) {
                     </button>
                   </div>
                 </div>
+
+                {/* Remember Me Checkbox on Sign In */}
+                {!isSignUp && (
+                  <div className="flex items-center justify-between pt-0.5">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="w-4 h-4 rounded-[4px] border-[#D8D7DE] text-[#171923] focus:ring-[#B78AF2] accent-[#171923] cursor-pointer"
+                      />
+                      <span className="text-[12px] font-medium text-[#171923]">Remember me</span>
+                    </label>
+                    <span className="text-[11px] text-[#777783]">Stay signed in</span>
+                  </div>
+                )}
 
                 {isSignUp && (
                   <div>

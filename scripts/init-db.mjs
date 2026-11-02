@@ -101,6 +101,7 @@ async function main() {
       space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
       title TEXT NOT NULL,
       description TEXT,
+      category TEXT,
       deadline TIMESTAMPTZ,
       lead_time_days INTEGER DEFAULT 0,
       reminder_date TIMESTAMPTZ,
