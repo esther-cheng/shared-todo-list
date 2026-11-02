@@ -23,7 +23,7 @@ import { GroupContextMenu } from "@/components/GroupContextMenu";
 import { DeleteSpaceModal } from "@/components/DeleteSpaceModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
 import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
-import { Loader2, CheckSquare, Users, X, AtSign, Tag, Settings } from "lucide-react";
+import { Loader2, CheckSquare, Users, X, AtSign, Tag, Settings, Plus } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -53,6 +53,7 @@ export default function HomePage() {
   const [selectedCommentTag, setSelectedCommentTag] = useState<string | null>(null);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [quickTaskTitle, setQuickTaskTitle] = useState<string>("");
   const [friendsData, setFriendsData] = useState<FriendsData>({
     friends: [],
     pending_incoming: [],
@@ -829,6 +830,61 @@ export default function HomePage() {
               </div>
             )}
 
+            {/* Inline Quick Add Task for Group / Feed */}
+            {activeFilter !== "radar" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!quickTaskTitle.trim()) return;
+                  const targetSpaceId = selectedSpaceId !== "all" ? selectedSpaceId : (spaces[0]?.id || "");
+                  if (!targetSpaceId) {
+                    setIsCreateModalOpen(true);
+                    return;
+                  }
+                  handleCreateTask({
+                    title: quickTaskTitle.trim(),
+                    description: "",
+                    space_id: targetSpaceId,
+                    category: selectedCategoryFilter || "shopping",
+                    deadline: null,
+                    lead_time_days: 0,
+                    created_by: currentUser ? currentUser.name : "Alex",
+                  });
+                  setQuickTaskTitle("");
+                }}
+                className="bg-[#FFFFFF] border border-[#D8D7DE] focus-within:border-[var(--color-primary)] rounded-[14px] px-3.5 py-2 flex items-center gap-2.5 shadow-2xs transition-all"
+              >
+                <Plus className="w-4 h-4 text-[#777783] shrink-0" />
+                <input
+                  type="text"
+                  value={quickTaskTitle}
+                  onChange={(e) => setQuickTaskTitle(e.target.value)}
+                  placeholder={
+                    selectedSpaceId !== "all"
+                      ? `Add a task to ${spaces.find((s) => s.id === selectedSpaceId)?.name || "this group"}...`
+                      : "Add a task... (Press Enter to add, or click Details for deadline & prep time)"
+                  }
+                  className="w-full bg-transparent text-xs text-[#171923] placeholder:text-[#777783] outline-none"
+                />
+                {quickTaskTitle.trim().length > 0 && (
+                  <button
+                    type="submit"
+                    className="px-2.5 py-1 rounded-[8px] bg-[#171923] text-white text-[11px] font-semibold hover:bg-[#2D313E] transition-all cursor-pointer shrink-0"
+                  >
+                    Add
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="text-[11px] font-semibold text-[#777783] hover:text-[#171923] px-2 py-1 rounded-[8px] hover:bg-[#F4F3F5] transition-colors shrink-0 cursor-pointer"
+                  title="Open full task creator with deadline, category & prep time"
+                >
+                  Details
+                </button>
+              </form>
+            )}
+
             {/* View Render */}
             {isLoading ? (
               <div className="py-20 flex flex-col items-center justify-center text-[#777783] gap-2">
@@ -845,12 +901,24 @@ export default function HomePage() {
             ) : currentView === "wall" ? (
               <div className="space-y-3.5">
                 {filteredTasks.length === 0 ? (
-                  <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-12 text-center text-[#777783] space-y-2">
+                  <div className="bg-[#FFFFFF] border border-[#D8D7DE] rounded-[18px] p-10 text-center text-[#777783] space-y-3">
                     <CheckSquare className="w-8 h-8 text-[#D8D7DE] mx-auto stroke-[1.5]" />
-                    <p className="text-[15px] font-semibold text-[#171923]">No tasks found</p>
-                    <p className="text-xs text-[#777783]">
-                      Create your first task using the + New Task button.
-                    </p>
+                    <div>
+                      <p className="text-[15px] font-semibold text-[#171923]">No tasks found</p>
+                      <p className="text-xs text-[#777783] mt-0.5">
+                        {selectedSpaceId === "all"
+                          ? "Create your first task to get started."
+                          : `Add the first task to ${spaces.find((s) => s.id === selectedSpaceId)?.name || "this group"}.`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[12px] bg-[#171923] text-white text-xs font-semibold hover:bg-[#2D313E] transition-all shadow-xs cursor-pointer active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Add a task</span>
+                    </button>
                   </div>
                 ) : (
                   filteredTasks.map((task) => (

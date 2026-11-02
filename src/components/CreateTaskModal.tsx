@@ -62,10 +62,13 @@ export function CreateTaskModal({
   const [category, setCategory] = useState<string>(() => draftLoaded?.category || "shopping");
   const selectedCategoryObj = getCategory(category);
   const [spaceId, setSpaceId] = useState(() => {
+    if (defaultSpaceId && spaces.some((s) => s.id === defaultSpaceId)) {
+      return defaultSpaceId;
+    }
     if (draftLoaded?.spaceId && spaces.some((s) => s.id === draftLoaded.spaceId)) {
       return draftLoaded.spaceId;
     }
-    return defaultSpaceId || spaces[0]?.id || "";
+    return spaces[0]?.id || "";
   });
 
   const selectedSpace = availableSpaces.find((s) => s.id === spaceId);
