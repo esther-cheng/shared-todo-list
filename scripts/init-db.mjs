@@ -115,18 +115,12 @@ async function main() {
   `;
   console.log("✓ Tasks table ready");
 
-  // Create compatibility views
+  // Ensure legacy compatibility views are dropped (spaces removed in favor of groups)
   try {
-    await sql`
-      CREATE OR REPLACE VIEW spaces AS 
-        SELECT id, name, slug, color, icon, created_by, created_at FROM groups;
-    `;
-    await sql`
-      CREATE OR REPLACE VIEW space_members AS 
-        SELECT group_id AS space_id, group_id, user_id, role, created_at FROM group_members;
-    `;
+    await sql`DROP VIEW IF EXISTS space_members CASCADE;`;
+    await sql`DROP VIEW IF EXISTS spaces CASCADE;`;
   } catch {
-    // Ignore if views already exist or base table conflict
+    // Ignore
   }
 
   await sql`
@@ -310,11 +304,11 @@ async function main() {
     console.log("✓ Sample tasks and tagged notes seeded");
   }
 
-  const spacesCount = await sql`SELECT count(*) FROM spaces;`;
+  const groupsCount = await sql`SELECT count(*) FROM groups;`;
   const tasksCount = await sql`SELECT count(*) FROM tasks;`;
   const notesCount = await sql`SELECT count(*) FROM task_notes;`;
 
-  console.log(`Database ready: ${spacesCount[0].count} spaces, ${tasksCount[0].count} tasks, ${notesCount[0].count} notes.`);
+  console.log(`Database ready: ${groupsCount[0].count} groups, ${tasksCount[0].count} tasks, ${notesCount[0].count} notes.`);
 }
 
 main().catch((err) => {

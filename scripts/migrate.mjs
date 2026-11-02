@@ -53,7 +53,7 @@ try {
 // 3. Find and run all migration scripts in scripts/
 const scriptsDir = path.resolve(process.cwd(), "scripts");
 const migrationFiles = [
-  "migrate-friends-spaces.mjs",
+  "migrate-friends-groups.mjs",
   "migrate-notifications.mjs",
   "migrate-web-push.mjs",
   "migrate-task-categories.mjs",

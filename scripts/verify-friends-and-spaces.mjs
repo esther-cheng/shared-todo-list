@@ -118,30 +118,30 @@ async function runTests() {
   }
   console.log("✓ Test 4: Private user Bob CAN now be added to space since they are friends!");
 
-  // TEST 5: Create a space with members option
+  // TEST 5: Create a group with members option
   const testSpaceId = `test-space-${now}`;
   await sql`
-    INSERT INTO spaces (id, name, slug, color, icon, created_by)
+    INSERT INTO groups (id, name, slug, color, icon, created_by)
     VALUES (${testSpaceId}, 'Charlie Project', ${'charlie-proj-' + now}, 'purple', 'star', ${userCharlieId});
   `;
   await sql`
-    INSERT INTO space_members (space_id, user_id, role)
+    INSERT INTO group_members (group_id, space_id, user_id, role)
     VALUES 
-      (${testSpaceId}, ${userCharlieId}, 'owner'),
-      (${testSpaceId}, ${userAliceId}, 'member'),
-      (${testSpaceId}, ${userBobId}, 'member');
+      (${testSpaceId}, ${testSpaceId}, ${userCharlieId}, 'owner'),
+      (${testSpaceId}, ${testSpaceId}, ${userAliceId}, 'member'),
+      (${testSpaceId}, ${testSpaceId}, ${userBobId}, 'member');
   `;
 
   const membersInSpace = await sql`
-    SELECT user_id, role FROM space_members WHERE space_id = ${testSpaceId};
+    SELECT user_id, role FROM group_members WHERE group_id = ${testSpaceId} OR space_id = ${testSpaceId};
   `;
   if (membersInSpace.length !== 3) {
-    throw new Error(`FAIL: Expected 3 members in space, got ${membersInSpace.length}`);
+    throw new Error(`FAIL: Expected 3 members in group, got ${membersInSpace.length}`);
   }
-  console.log(`✓ Test 5: Space created with initial members (owner + Alice + Bob). Total members: ${membersInSpace.length}`);
+  console.log(`✓ Test 5: Group created with initial members (owner + Alice + Bob). Total members: ${membersInSpace.length}`);
 
   // Clean up test records
-  await sql`DELETE FROM spaces WHERE id = ${testSpaceId};`;
+  await sql`DELETE FROM groups WHERE id = ${testSpaceId};`;
   await sql`DELETE FROM friendships WHERE id = ${friendshipId};`;
   await sql`DELETE FROM users WHERE id IN (${userAliceId}, ${userBobId}, ${userCharlieId});`;
   console.log("✓ Cleaned up test data cleanly");

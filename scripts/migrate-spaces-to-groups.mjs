@@ -155,25 +155,13 @@ async function migrate() {
     console.log("✓ Added group_id column to tasks and backfilled from space_id");
   }
 
-  // 5. Create compatibility views for spaces and space_members if not present
+  // 5. Drop legacy compatibility views if they exist (spaces concept removed)
   try {
-    await sql`
-      CREATE OR REPLACE VIEW spaces AS 
-        SELECT id, name, slug, color, icon, created_by, created_at FROM groups;
-    `;
-    console.log("✓ Created compatibility view spaces -> groups");
+    await sql`DROP VIEW IF EXISTS space_members CASCADE;`;
+    await sql`DROP VIEW IF EXISTS spaces CASCADE;`;
+    console.log("✓ Removed legacy spaces and space_members views");
   } catch (err) {
-    console.warn("View spaces notice:", err.message);
-  }
-
-  try {
-    await sql`
-      CREATE OR REPLACE VIEW space_members AS 
-        SELECT group_id AS space_id, group_id, user_id, role, created_at FROM group_members;
-    `;
-    console.log("✓ Created compatibility view space_members -> group_members");
-  } catch (err) {
-    console.warn("View space_members notice:", err.message);
+    console.warn("Drop view notice:", err.message);
   }
 
   console.log("\n✅ Database migration to groups & group_members completed successfully!\n");

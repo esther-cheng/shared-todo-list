@@ -109,7 +109,7 @@ async function main() {
   // Delete space directly via database
   const { neon } = await import("@neondatabase/serverless");
   const sql = neon(process.env.DATABASE_URL);
-  await sql`DELETE FROM spaces WHERE id = ${createdSpace.id};`;
+  await sql`DELETE FROM groups WHERE id = ${createdSpace.id};`;
   console.log("✓ Cleanup finished cleanly");
 
   console.log("\n🎉 ALL INLINE SPACE CREATION TESTS PASSED!");

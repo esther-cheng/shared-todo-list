@@ -36,7 +36,11 @@ if (!dbUrl) {
 const sql = neon(dbUrl.replace(/^["']|["']$/g, "").trim());
 
 async function main() {
-  console.log("Running migration for privacy, friendships, and space memberships...");
+  console.log("Running migration for privacy, friendships, and group memberships...");
+
+  // 0. Remove any legacy spaces / space_members views if they exist
+  await sql`DROP VIEW IF EXISTS space_members CASCADE;`;
+  await sql`DROP VIEW IF EXISTS spaces CASCADE;`;
 
   // 1. Add is_private column to users
   await sql`
@@ -45,36 +49,25 @@ async function main() {
   `;
   console.log("✓ Added is_private column to users");
 
-  // 2. Add created_by column to spaces or groups (handling view vs base table)
-  const spacesTableCheck = await sql`
-    SELECT table_name, table_type 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' AND table_name = 'spaces';
-  `;
-  const isSpacesBaseTable = spacesTableCheck.length > 0 && spacesTableCheck[0].table_type === 'BASE TABLE';
-
+  // 2. Ensure groups table exists and has created_by column
   const groupsTableCheck = await sql`
     SELECT table_name, table_type 
     FROM information_schema.tables 
     WHERE table_schema = 'public' AND table_name = 'groups';
   `;
-  const isGroupsBaseTable = groupsTableCheck.length > 0 && groupsTableCheck[0].table_type === 'BASE TABLE';
 
-  if (isSpacesBaseTable) {
+  // If a legacy base table named spaces exists and groups does not, rename it
+  const spacesTableCheck = await sql`
+    SELECT table_name, table_type 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'spaces';
+  `;
+  if (spacesTableCheck.length > 0 && spacesTableCheck[0].table_type === 'BASE TABLE' && groupsTableCheck.length === 0) {
+    await sql`ALTER TABLE spaces RENAME TO groups;`;
+    console.log("✓ Renamed legacy spaces table to groups");
+  } else if (groupsTableCheck.length === 0) {
     await sql`
-      ALTER TABLE spaces 
-      ADD COLUMN IF NOT EXISTS created_by TEXT;
-    `;
-    console.log("✓ Added created_by column to spaces table");
-  } else if (isGroupsBaseTable) {
-    await sql`
-      ALTER TABLE groups 
-      ADD COLUMN IF NOT EXISTS created_by TEXT;
-    `;
-    console.log("✓ Added created_by column to groups table");
-  } else {
-    await sql`
-      CREATE TABLE IF NOT EXISTS spaces (
+      CREATE TABLE IF NOT EXISTS groups (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         slug TEXT UNIQUE NOT NULL,
@@ -84,8 +77,15 @@ async function main() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `;
-    console.log("✓ Created spaces table with created_by column");
+    console.log("✓ Created groups table");
   }
+
+  // Ensure created_by column exists on groups
+  await sql`
+    ALTER TABLE groups 
+    ADD COLUMN IF NOT EXISTS created_by TEXT;
+  `;
+  console.log("✓ Added created_by column to groups table");
 
   // 3. Create friendships table
   await sql`
@@ -100,106 +100,72 @@ async function main() {
   `;
   console.log("✓ Created friendships table");
 
-  // 4. Create space_members / group_members table if not exists
-  const spaceMembersCheck = await sql`
-    SELECT table_name, table_type 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' AND table_name = 'space_members';
-  `;
+  // 4. Ensure group_members table exists
   const groupMembersCheck = await sql`
     SELECT table_name, table_type 
     FROM information_schema.tables 
     WHERE table_schema = 'public' AND table_name = 'group_members';
   `;
 
-  const hasSpaceMembers = spaceMembersCheck.length > 0;
-  const hasGroupMembers = groupMembersCheck.length > 0;
-
-  if (!hasSpaceMembers && !hasGroupMembers) {
-    if (isGroupsBaseTable) {
-      await sql`
-        CREATE TABLE IF NOT EXISTS group_members (
-          group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-          space_id TEXT,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          role TEXT NOT NULL DEFAULT 'member', -- 'owner', 'member'
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          PRIMARY KEY (group_id, user_id)
-        );
-      `;
-      console.log("✓ Created group_members table");
-    } else {
-      await sql`
-        CREATE TABLE IF NOT EXISTS space_members (
-          space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
-          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          role TEXT NOT NULL DEFAULT 'member', -- 'owner', 'member'
-          created_at TIMESTAMPTZ DEFAULT NOW(),
-          PRIMARY KEY (space_id, user_id)
-        );
-      `;
-      console.log("✓ Created space_members table");
-    }
-  } else {
-    console.log("✓ Membership relation (group_members or space_members) ready");
+  // If a legacy base table named space_members exists and group_members does not, rename it
+  const spaceMembersCheck = await sql`
+    SELECT table_name, table_type 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'space_members';
+  `;
+  if (spaceMembersCheck.length > 0 && spaceMembersCheck[0].table_type === 'BASE TABLE' && groupMembersCheck.length === 0) {
+    await sql`ALTER TABLE space_members RENAME TO group_members;`;
+    console.log("✓ Renamed legacy space_members table to group_members");
+  } else if (groupMembersCheck.length === 0) {
+    await sql`
+      CREATE TABLE IF NOT EXISTS group_members (
+        group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+        space_id TEXT,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member', -- 'owner', 'member'
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (group_id, user_id)
+      );
+    `;
+    console.log("✓ Created group_members table");
   }
 
-  // 5. Populate initial memberships for existing spaces so demo data continues to work
-  const spaces = isGroupsBaseTable
-    ? await sql`SELECT id FROM groups;`
-    : await sql`SELECT id FROM spaces;`;
+  // Ensure group_members has group_id column
+  const initialCols = (await sql`
+    SELECT column_name 
+    FROM information_schema.columns 
+    WHERE table_name = 'group_members';
+  `).map((c) => c.column_name);
+
+  if (initialCols.includes("space_id") && !initialCols.includes("group_id")) {
+    await sql`ALTER TABLE group_members RENAME COLUMN space_id TO group_id;`;
+  }
+  if (!initialCols.includes("space_id")) {
+    await sql`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS space_id TEXT;`;
+    await sql`UPDATE group_members SET space_id = group_id WHERE space_id IS NULL;`;
+  }
+
+  // 5. Populate initial memberships for existing groups so demo data continues to work
+  const groups = await sql`SELECT id FROM groups;`;
   const users = await sql`SELECT id, username FROM users;`;
 
   if (users.length > 0) {
     const firstUserId = users[0].id;
-
-    if (isGroupsBaseTable) {
-      const groupMemberCols = (await sql`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'group_members';
-      `).map((c) => c.column_name);
-      const hasSpaceIdCol = groupMemberCols.includes("space_id");
-
-      for (const space of spaces) {
+    for (const group of groups) {
+      await sql`
+        UPDATE groups 
+        SET created_by = ${firstUserId} 
+        WHERE id = ${group.id} AND created_by IS NULL;
+      `;
+      for (const u of users) {
         await sql`
-          UPDATE groups 
-          SET created_by = ${firstUserId} 
-          WHERE id = ${space.id} AND created_by IS NULL;
+          INSERT INTO group_members (group_id, space_id, user_id, role)
+          VALUES (${group.id}, ${group.id}, ${u.id}, ${u.id === firstUserId ? 'owner' : 'member'})
+          ON CONFLICT (group_id, user_id) DO NOTHING;
         `;
-        for (const u of users) {
-          if (hasSpaceIdCol) {
-            await sql`
-              INSERT INTO group_members (group_id, space_id, user_id, role)
-              VALUES (${space.id}, ${space.id}, ${u.id}, ${u.id === firstUserId ? 'owner' : 'member'})
-              ON CONFLICT (group_id, user_id) DO NOTHING;
-            `;
-          } else {
-            await sql`
-              INSERT INTO group_members (group_id, user_id, role)
-              VALUES (${space.id}, ${u.id}, ${u.id === firstUserId ? 'owner' : 'member'})
-              ON CONFLICT (group_id, user_id) DO NOTHING;
-            `;
-          }
-        }
-      }
-    } else {
-      for (const space of spaces) {
-        await sql`
-          UPDATE spaces 
-          SET created_by = ${firstUserId} 
-          WHERE id = ${space.id} AND created_by IS NULL;
-        `;
-        for (const u of users) {
-          await sql`
-            INSERT INTO space_members (space_id, user_id, role)
-            VALUES (${space.id}, ${u.id}, ${u.id === firstUserId ? 'owner' : 'member'})
-            ON CONFLICT (space_id, user_id) DO NOTHING;
-          `;
-        }
       }
     }
-    console.log(`✓ Ensured memberships for ${spaces.length} spaces`);
+    console.log(`✓ Ensured memberships for ${groups.length} groups`);
   }
 
   // 6. If alex and taylor exist, establish friendship for demo ease
@@ -222,4 +188,3 @@ main().catch(err => {
   console.error("Migration error:", err);
   process.exit(1);
 });
-
