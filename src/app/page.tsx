@@ -21,7 +21,7 @@ import { SpaceMembersModal } from "@/components/SpaceMembersModal";
 import { GroupSettingsModal } from "@/components/GroupSettingsModal";
 import { GroupContextMenu } from "@/components/GroupContextMenu";
 import { DeleteSpaceModal } from "@/components/DeleteSpaceModal";
-import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
+import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle, getSpaceColor, getSpaceIcon } from "@/lib/colors";
 import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
 import { Loader2, CheckSquare, Users, X, AtSign, Tag, Settings, Plus } from "lucide-react";
 
@@ -35,16 +35,6 @@ export default function HomePage() {
   const userColor = currentUser?.avatar_color || "purple";
   const userHighlight = getUserHighlightStyle(userColor);
 
-  // Sync dynamic CSS variables to root based on user's color profile
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.documentElement.style.setProperty("--color-primary", userHighlight.primaryHex);
-      document.documentElement.style.setProperty("--color-primary-light", userHighlight.lightHex);
-      document.documentElement.style.setProperty("--color-primary-text", userHighlight.textHex);
-      document.documentElement.style.setProperty("--color-primary-border", userHighlight.borderHex);
-    }
-  }, [userHighlight]);
-
   // Filters & State
   const [currentView, setCurrentView] = useState<"wall" | "list" | "calendar">("wall");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>("all");
@@ -54,6 +44,26 @@ export default function HomePage() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [quickTaskTitle, setQuickTaskTitle] = useState<string>("");
+
+  const activeSpace = selectedSpaceId !== "all" ? spaces.find((s) => s.id === selectedSpaceId) : null;
+  const activeSpaceColor = activeSpace ? getSpaceColor(activeSpace.color) : null;
+
+  // Sync dynamic CSS variables to root: uses active group's color token when in a group, or user's color profile on All Groups
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      if (activeSpaceColor) {
+        document.documentElement.style.setProperty("--color-primary", activeSpaceColor.primaryHex);
+        document.documentElement.style.setProperty("--color-primary-light", activeSpaceColor.lightHex);
+        document.documentElement.style.setProperty("--color-primary-text", activeSpaceColor.textHex);
+        document.documentElement.style.setProperty("--color-primary-border", activeSpaceColor.borderHex);
+      } else {
+        document.documentElement.style.setProperty("--color-primary", userHighlight.primaryHex);
+        document.documentElement.style.setProperty("--color-primary-light", userHighlight.lightHex);
+        document.documentElement.style.setProperty("--color-primary-text", userHighlight.textHex);
+        document.documentElement.style.setProperty("--color-primary-border", userHighlight.borderHex);
+      }
+    }
+  }, [activeSpaceColor, userHighlight]);
   const [friendsData, setFriendsData] = useState<FriendsData>({
     friends: [],
     pending_incoming: [],
@@ -652,12 +662,24 @@ export default function HomePage() {
             {/* Filter Status Bar */}
             <div className="flex items-center justify-between gap-2 px-1 text-xs">
               <div className="flex items-center gap-2 flex-wrap min-w-0">
-                {/* 1. Group Name */}
-                <span className="font-semibold text-[#171923] text-[15px] truncate max-w-[150px] sm:max-w-none">
-                  {selectedSpaceId === "all"
-                    ? "All groups"
-                    : spaces.find((s) => s.id === selectedSpaceId)?.name}
-                </span>
+                {/* 1. Group Name & Icon */}
+                {activeSpace && activeSpaceColor ? (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`w-7 h-7 rounded-[8px] border flex items-center justify-center shrink-0 ${activeSpaceColor.badgeBg} ${activeSpaceColor.badgeText} ${activeSpaceColor.badgeBorder}`}
+                      title={activeSpace.name}
+                    >
+                      {getSpaceIcon(activeSpace.icon, "w-3.5 h-3.5")}
+                    </span>
+                    <span className="font-semibold text-[#171923] text-[15px] truncate max-w-[150px] sm:max-w-none">
+                      {activeSpace.name}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="font-semibold text-[#171923] text-[15px] truncate max-w-[150px] sm:max-w-none">
+                    All groups
+                  </span>
+                )}
 
                 {/* 2. Task Count */}
                 <span className="text-[#777783] text-xs font-normal shrink-0">

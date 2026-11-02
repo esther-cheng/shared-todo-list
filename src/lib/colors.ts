@@ -11,11 +11,17 @@ import {
   ShoppingBag, 
   Briefcase, 
   Star, 
-  BookOpen 
+  BookOpen,
+  Folder,
+  Users
 } from "lucide-react";
 
 export function getSpaceIcon(iconName?: string, className: string = "w-3.5 h-3.5"): React.ReactNode {
   switch (iconName) {
+    case "folder":
+      return React.createElement(Folder, { className });
+    case "users":
+      return React.createElement(Users, { className });
     case "heart":
       return React.createElement(Heart, { className });
     case "home":
@@ -37,7 +43,7 @@ export function getSpaceIcon(iconName?: string, className: string = "w-3.5 h-3.5
     case "book":
       return React.createElement(BookOpen, { className });
     default:
-      return React.createElement("span", { className: "w-2 h-2 rounded-full bg-[#B78AF2]" });
+      return React.createElement(Folder, { className });
   }
 }
 
@@ -213,6 +219,10 @@ export interface SpaceColorConfig {
   cardBg: string;
   accent: string;
   hex: string;
+  primaryHex: string;
+  lightHex: string;
+  textHex: string;
+  borderHex: string;
 }
 
 export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
@@ -224,6 +234,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#FAF6FE] to-white",
     accent: "bg-[#B78AF2]",
     hex: "#B78AF2",
+    primaryHex: "#B78AF2",
+    lightHex: "#F5EEFD",
+    textHex: "#6B21A8",
+    borderHex: "#E5D4F9",
   },
   orange: {
     badgeBg: "bg-[#FFF2EE] dark:bg-orange-950/60",
@@ -233,6 +247,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#FFF6F3] to-white",
     accent: "bg-[#FF705B]",
     hex: "#FF705B",
+    primaryHex: "#FF705B",
+    lightHex: "#FFF2EE",
+    textHex: "#C2410C",
+    borderHex: "#FEDACE",
   },
   sky: {
     badgeBg: "bg-[#F0F9FE] dark:bg-sky-950/60",
@@ -242,6 +260,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#F5FBFE] to-white",
     accent: "bg-[#BFEAF7]",
     hex: "#BFEAF7",
+    primaryHex: "#BFEAF7",
+    lightHex: "#F0F9FE",
+    textHex: "#0369A1",
+    borderHex: "#CEEEF9",
   },
   emerald: {
     badgeBg: "bg-[#EFF8F5] dark:bg-emerald-950/60",
@@ -251,6 +273,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#F5FAF8] to-white",
     accent: "bg-[#A8DCCB]",
     hex: "#A8DCCB",
+    primaryHex: "#A8DCCB",
+    lightHex: "#EFF8F5",
+    textHex: "#065F46",
+    borderHex: "#CCEBE1",
   },
   rose: {
     badgeBg: "bg-[#FDF2F8] dark:bg-pink-950/60",
@@ -260,6 +286,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#FDF2F8] to-white",
     accent: "bg-[#F472B6]",
     hex: "#F472B6",
+    primaryHex: "#F472B6",
+    lightHex: "#FDF2F8",
+    textHex: "#9D174D",
+    borderHex: "#FBCFE8",
   },
   amber: {
     badgeBg: "bg-[#FEF3C7] dark:bg-amber-950/60",
@@ -269,6 +299,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#FFFDF5] to-white",
     accent: "bg-[#FBBF24]",
     hex: "#FBBF24",
+    primaryHex: "#FBBF24",
+    lightHex: "#FEF3C7",
+    textHex: "#B45309",
+    borderHex: "#FDE68A",
   },
   indigo: {
     badgeBg: "bg-[#EEF2FF] dark:bg-indigo-950/60",
@@ -278,6 +312,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#F8FAFF] to-white",
     accent: "bg-[#818CF8]",
     hex: "#818CF8",
+    primaryHex: "#818CF8",
+    lightHex: "#EEF2FF",
+    textHex: "#4338CA",
+    borderHex: "#C7D2FE",
   },
   teal: {
     badgeBg: "bg-[#CCFBF1] dark:bg-teal-950/60",
@@ -287,6 +325,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#F0FDF4] to-white",
     accent: "bg-[#2DD4BF]",
     hex: "#2DD4BF",
+    primaryHex: "#2DD4BF",
+    lightHex: "#CCFBF1",
+    textHex: "#0F766E",
+    borderHex: "#99F6E4",
   },
   pink: {
     badgeBg: "bg-[#FFE4E6] dark:bg-rose-950/60",
@@ -296,6 +338,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#FFF1F2] to-white",
     accent: "bg-[#F43F5E]",
     hex: "#F43F5E",
+    primaryHex: "#F43F5E",
+    lightHex: "#FFE4E6",
+    textHex: "#BE123C",
+    borderHex: "#FECDD3",
   },
   slate: {
     badgeBg: "bg-[#F1F5F9] dark:bg-slate-950/60",
@@ -305,6 +351,10 @@ export const SPACE_COLORS: Record<string, SpaceColorConfig> = {
     cardBg: "from-[#F8FAFC] to-white",
     accent: "bg-[#94A3B8]",
     hex: "#94A3B8",
+    primaryHex: "#94A3B8",
+    lightHex: "#F1F5F9",
+    textHex: "#334155",
+    borderHex: "#CBD5E1",
   },
 };
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Space, FilterCounts, SearchedUser } from "@/types";
-import { getSpaceIcon, getUserHighlightStyle, getUserAvatarStyle } from "@/lib/colors";
+import { getSpaceIcon, getSpaceColor, getUserHighlightStyle, getUserAvatarStyle } from "@/lib/colors";
 import { 
   LayoutGrid, 
   List, 
@@ -371,6 +371,7 @@ export function Sidebar({
 
           {spaces.map((space) => {
             const isSelected = selectedSpaceId === space.id;
+            const spaceColor = getSpaceColor(space.color);
             const count = filterCounts.spaces[space.id] ?? space.task_count ?? 0;
             return (
               <div key={space.id} className="relative group/space flex items-center">
@@ -383,12 +384,12 @@ export function Sidebar({
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
                     isSelected
-                      ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
+                      ? `${spaceColor.badgeBg} ${spaceColor.badgeText} font-semibold border ${spaceColor.badgeBorder} shadow-2xs`
                       : "text-[#171923] hover:bg-[#F4F3F5]"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${userHighlight.textDark}` : "w-4 h-4 text-[#777783]")}
+                    {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${spaceColor.badgeText}` : "w-4 h-4 text-[#777783]")}
                     <span className="truncate">{space.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -405,7 +406,7 @@ export function Sidebar({
                     </span>
                     <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
                       isSelected
-                        ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+                        ? `${spaceColor.badgeBg} ${spaceColor.badgeText} border ${spaceColor.badgeBorder}`
                         : "bg-[#D8D7DE]/70 text-[#777783]"
                     }`}>
                       {count}
