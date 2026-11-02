@@ -104,19 +104,20 @@ export function Header({
   const userAvatarStyle = getUserAvatarStyle(currentUser?.avatar_color);
 
   return (
-    <header className="sticky top-0 z-30 bg-[#FFFFFF] border-b border-[#D8D7DE] px-4 sm:px-8 py-3.5 transition-colors">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 bg-[#FFFFFF] border-b border-[#D8D7DE] px-3 sm:px-8 py-2.5 sm:py-3.5 transition-colors w-full max-w-full">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 w-full min-w-0">
         {/* Brand / Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[12px] bg-[#171923] text-white flex items-center justify-center font-display text-2xl font-bold shadow-xs select-none shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+          {/* Logo icon - hidden first on mobile when space is constrained */}
+          <div className="hidden sm:flex w-10 h-10 rounded-[12px] bg-[#171923] text-white items-center justify-center font-display text-2xl font-bold shadow-xs select-none shrink-0">
             T
           </div>
-          <div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-display text-3xl sm:text-[32px] font-bold text-[#171923] tracking-normal leading-none">
+          <div className="min-w-0">
+            <div className="flex items-baseline gap-1 sm:gap-1.5">
+              <span className="font-display text-2xl sm:text-[32px] font-bold text-[#171923] tracking-normal leading-none">
                 Tandem
               </span>
-              <span className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[var(--color-primary)] shrink-0" />
             </div>
             <p className="hidden sm:block text-[12px] text-[#777783] font-medium leading-none mt-1">
               Life&apos;s better in sync.
@@ -162,14 +163,14 @@ export function Header({
         </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Mobile Search Toggle */}
           <button
             onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-            className="md:hidden p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="md:hidden p-2 sm:p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px] flex items-center justify-center shrink-0"
             aria-label="Toggle search"
           >
-            {isMobileSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+            {isMobileSearchOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Search className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
 
           {/* Friends & People Button */}
@@ -177,7 +178,7 @@ export function Header({
             <button
               type="button"
               onClick={onOpenFriends}
-              className="p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer select-none"
+              className="p-2 sm:p-2.5 rounded-[12px] text-[#171923] hover:bg-[#F4F3F5] transition-colors min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px] flex items-center justify-center cursor-pointer select-none shrink-0"
               title="Friends & People"
               aria-label="Friends & People"
             >
@@ -186,14 +187,14 @@ export function Header({
           )}
 
           {/* Notifications Dropdown */}
-          <div className="relative" ref={notificationRef}>
+          <div className="relative shrink-0" ref={notificationRef}>
             <button
               type="button"
               onClick={() => {
                 setIsNotificationsOpen((prev) => !prev);
                 setIsUserMenuOpen(false);
               }}
-              className={`relative p-2.5 rounded-[12px] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer select-none ${
+              className={`relative p-2 sm:p-2.5 rounded-[12px] transition-colors min-w-[36px] sm:min-w-[44px] min-h-[36px] sm:min-h-[44px] flex items-center justify-center cursor-pointer select-none shrink-0 ${
                 isNotificationsOpen
                   ? "bg-[#171923] text-white"
                   : "text-[#171923] hover:bg-[#F4F3F5]"
@@ -204,7 +205,7 @@ export function Header({
             >
               <Bell className="w-4 h-4" />
               {activeCount > 0 && (
-                <span className="absolute top-2 right-2 min-w-[16px] h-4 text-[10px] font-bold rounded-full bg-[#FF705B] text-white flex items-center justify-center px-1 pointer-events-none">
+                <span className="absolute top-1 right-1 sm:top-2 sm:right-2 min-w-[15px] h-3.5 sm:min-w-[16px] sm:h-4 text-[9px] sm:text-[10px] font-bold rounded-full bg-[#FF705B] text-white flex items-center justify-center px-0.5 sm:px-1 pointer-events-none">
                   {activeCount}
                 </span>
               )}
@@ -229,7 +230,7 @@ export function Header({
           {/* Desktop New Task Button (to the left of user profile) */}
           <button
             onClick={onOpenCreateModal}
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-[12px] text-[14px] font-semibold text-white bg-[#171923] hover:bg-[#2D313E] shadow-xs active:scale-[0.98] transition-all min-h-[42px]"
+            className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-[12px] text-[14px] font-semibold text-white bg-[#171923] hover:bg-[#2D313E] shadow-xs active:scale-[0.98] transition-all min-h-[42px] shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>New task</span>
@@ -237,14 +238,14 @@ export function Header({
 
           {/* User Profile / Auth Button */}
           {currentUser ? (
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative shrink-0" ref={userMenuRef}>
               <button
                 type="button"
                 onClick={() => {
                   setIsUserMenuOpen((prev) => !prev);
                   setIsNotificationsOpen(false);
                 }}
-                className={`flex items-center gap-2.5 pl-2 pr-2.5 sm:pr-3 py-1.5 rounded-[12px] border transition-all min-h-[42px] cursor-pointer select-none ${
+                className={`flex items-center gap-1.5 sm:gap-2.5 p-1 sm:pl-2 sm:pr-3 sm:py-1.5 rounded-[12px] border transition-all min-h-[36px] sm:min-h-[42px] cursor-pointer select-none shrink-0 ${
                   isUserMenuOpen
                     ? "bg-[#FFFFFF] border-[#171923] shadow-xs"
                     : "bg-[#F4F3F5] border-[#D8D7DE]/70 hover:bg-[#EAE8ED] hover:border-[#D8D7DE]"
@@ -271,7 +272,7 @@ export function Header({
                 </div>
 
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-[#777783] transition-transform duration-150 ${
+                  className={`w-3.5 h-3.5 text-[#777783] transition-transform duration-150 shrink-0 ${
                     isUserMenuOpen ? "rotate-180 text-[#171923]" : ""
                   }`}
                 />
@@ -329,7 +330,7 @@ export function Header({
           ) : (
             <button
               onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-xs font-semibold text-[#171923] bg-[#FFFFFF] border border-[#D8D7DE] hover:bg-[#F4F3F5] transition-all min-h-[40px]"
+              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-[12px] text-xs font-semibold text-[#171923] bg-[#FFFFFF] border border-[#D8D7DE] hover:bg-[#F4F3F5] transition-all min-h-[36px] sm:min-h-[40px] shrink-0"
             >
               <LogIn className="w-3.5 h-3.5 text-[#171923]" />
               <span>Sign in</span>

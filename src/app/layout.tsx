@@ -36,9 +36,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lato.variable} ${grandHotel.variable} h-full antialiased`}
+      className={`${lato.variable} ${grandHotel.variable} h-full antialiased overflow-x-hidden`}
     >
-      <body className="min-h-full flex flex-col bg-[#F4F3F5] text-[#171923] font-sans selection:bg-[#B78AF2]/30 selection:text-[#171923]">
+      <body className="min-h-full flex flex-col bg-[#F4F3F5] text-[#171923] font-sans selection:bg-[#B78AF2]/30 selection:text-[#171923] overflow-x-hidden w-full max-w-full">
         {children}
       </body>
     </html>

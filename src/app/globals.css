@@ -50,6 +50,11 @@
   border-color: var(--color-border);
 }
 
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--color-canvas);
   color: var(--color-ink);
@@ -58,6 +63,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   caret-color: var(--color-ink);
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
 }
 
 .font-display {

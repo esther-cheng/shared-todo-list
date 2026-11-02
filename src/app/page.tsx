@@ -563,7 +563,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F3F5] text-[#171923] flex flex-col font-sans transition-colors">
+    <div className="min-h-screen bg-[#F4F3F5] text-[#171923] flex flex-col font-sans transition-colors w-full max-w-full overflow-x-hidden">
       {/* Top Header */}
       <Header
         searchQuery={searchQuery}
@@ -616,7 +616,7 @@ export default function HomePage() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-7 pb-28 lg:pb-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-5 sm:py-7 pb-28 lg:pb-10 min-w-0 max-w-full">
         <div className="flex flex-col lg:flex-row gap-6 items-start">
           {/* Desktop Left Navigation Sidebar (Hidden on mobile) */}
           <div className="hidden lg:block w-64 shrink-0">
@@ -650,45 +650,68 @@ export default function HomePage() {
           <div className="flex-1 w-full min-w-0 space-y-4">
             {/* Filter Status Bar */}
             <div className="flex items-center justify-between gap-2 px-1 text-xs">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-[#171923] text-[14px]">
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                {/* 1. Group Name */}
+                <span className="font-semibold text-[#171923] text-[15px] truncate max-w-[150px] sm:max-w-none">
                   {selectedSpaceId === "all"
                     ? "All groups"
                     : spaces.find((s) => s.id === selectedSpaceId)?.name}
                 </span>
 
-                {/* Specific space/group members manage button */}
+                {/* 2. Task Count */}
+                <span className="text-[#777783] text-xs font-normal shrink-0">
+                  ({filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"})
+                </span>
+
+                {/* 3. Group Members Pill */}
                 {selectedSpaceId !== "all" && (() => {
                   const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
                   if (!currentSpace) return null;
                   const memberCount = currentSpace.members?.length ?? currentSpace.member_count ?? 1;
                   return (
                     <button
-                      onClick={() => {
-                        setSelectedSpaceForSettings(currentSpace);
-                        setGroupSettingsInitialTab("members");
-                      }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#777783] hover:text-[#171923] transition-all cursor-pointer shadow-xs"
-                      title="Add people and manage members"
+                      onClick={() => setSelectedSpaceForMembers(currentSpace)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#777783] hover:text-[#171923] transition-all cursor-pointer shadow-2xs shrink-0"
+                      title="View and manage group members"
                     >
                       <Users className="w-3.5 h-3.5" />
                       <span>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <span className="text-[#6B21A8] font-bold ml-0.5">+ Add people</span>
                     </button>
                   );
                 })()}
 
+                {/* 4. Group Settings Button */}
+                {selectedSpaceId !== "all" && (() => {
+                  const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
+                  if (!currentSpace) return null;
+                  return (
+                    <button
+                      onClick={() => {
+                        setSelectedSpaceForSettings(currentSpace);
+                        setGroupSettingsInitialTab("general");
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#777783] hover:text-[#171923] transition-all cursor-pointer shadow-2xs shrink-0"
+                      title="Group settings (edit name, color, icon, delete group)"
+                      aria-label="Group settings"
+                    >
+                      <Settings className="w-3 h-3 text-[#777783]" />
+                      <span className="hidden sm:inline text-[11px]">Settings</span>
+                    </button>
+                  );
+                })()}
+
+                {/* Active Filter Badges */}
                 {activeFilter !== "all" && (
-                  <span className={`font-semibold px-2.5 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`}>
+                  <span className={`font-semibold px-2.5 py-0.5 rounded-full ${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border} shrink-0`}>
                     Filter: {activeFilter === "tagged" ? "Tagged for you" : activeFilter === "radar" ? "Action needed" : activeFilter}
                   </span>
                 )}
 
                 {/* Friend Filter Badge */}
                 {selectedFriend && (
-                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#EFF8F5] text-[#065F46] border border-[#CCEBE1] inline-flex items-center gap-1.5 shadow-2xs">
+                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#EFF8F5] text-[#065F46] border border-[#CCEBE1] inline-flex items-center gap-1.5 shadow-2xs shrink-0">
                     <span>With @{selectedFriend.username}</span>
                     <button
                       onClick={() => setSelectedFriend(null)}
@@ -702,7 +725,7 @@ export default function HomePage() {
 
                 {/* Tagged in Comments Active Badge */}
                 {selectedCommentTag && (
-                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#F4ECFC] text-[#6B21A8] border border-[#E5D4F9] inline-flex items-center gap-1.5 shadow-2xs">
+                  <span className="font-semibold px-2.5 py-0.5 rounded-full bg-[#F4ECFC] text-[#6B21A8] border border-[#E5D4F9] inline-flex items-center gap-1.5 shadow-2xs shrink-0">
                     <AtSign className="w-3 h-3 text-[#6B21A8]" />
                     <span>Tagged: {selectedCommentTag}</span>
                     <button
@@ -719,7 +742,7 @@ export default function HomePage() {
                 {selectedCategoryFilter && (() => {
                   const cat = getCategory(selectedCategoryFilter);
                   return (
-                    <span className={`font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 shadow-2xs border ${cat?.badgeBg || "bg-[#F4F3F5]"} ${cat?.badgeText || "text-[#171923]"} ${cat?.badgeBorder || "border-[#D8D7DE]"}`}>
+                    <span className={`font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 shadow-2xs border shrink-0 ${cat?.badgeBg || "bg-[#F4F3F5]"} ${cat?.badgeText || "text-[#171923]"} ${cat?.badgeBorder || "border-[#D8D7DE]"}`}>
                       <Tag className="w-3 h-3" />
                       <span>{cat?.label || selectedCategoryFilter}</span>
                       <button
@@ -732,32 +755,7 @@ export default function HomePage() {
                     </span>
                   );
                 })()}
-
-                <span className="text-[#777783] font-normal">
-                  ({filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"})
-                </span>
               </div>
-
-              {/* Group Settings button (all the way to the right) */}
-              {selectedSpaceId !== "all" && (() => {
-                const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
-                if (!currentSpace) return null;
-                return (
-                  <div className="shrink-0 ml-auto">
-                    <button
-                      onClick={() => {
-                        setSelectedSpaceForSettings(currentSpace);
-                        setGroupSettingsInitialTab("general");
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#171923] transition-all cursor-pointer shadow-xs"
-                      title="Group settings (edit name/color, add people, delete group)"
-                    >
-                      <Settings className="w-3.5 h-3.5 text-[#777783]" />
-                      <span>Settings</span>
-                    </button>
-                  </div>
-                );
-              })()}
             </div>
 
             {/* Quick Category Filter Bar */}

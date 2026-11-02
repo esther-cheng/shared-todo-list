@@ -31,7 +31,7 @@ export function MobileSpaceBar({
 }: MobileSpaceBarProps) {
   const userHighlight = getUserHighlightStyle(userColor);
   return (
-    <div className="lg:hidden w-full overflow-x-auto no-scrollbar py-2.5 px-4 flex items-center gap-2 border-b border-[#D8D7DE] bg-[#FFFFFF]">
+    <div className="lg:hidden w-full max-w-full overflow-x-auto no-scrollbar py-2.5 px-4 flex items-center gap-2 border-b border-[#D8D7DE] bg-[#FFFFFF]">
       {/* All Spaces / Groups */}
       <button
         onClick={() => {
