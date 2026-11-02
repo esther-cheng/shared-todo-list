@@ -13,7 +13,8 @@ import {
   Users,
   UserPlus,
   Check,
-  X
+  X,
+  MoreHorizontal
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ interface SidebarProps {
   onOpenCreateSpaceModal: () => void;
   onOpenFriendsModal?: () => void;
   onManageSpaceMembers?: (space: Space) => void;
+  onContextMenuSpace?: (space: Space, x: number, y: number) => void;
   friends?: SearchedUser[];
   pendingRequestsCount?: number;
   selectedFriend?: SearchedUser | null;
@@ -53,6 +55,7 @@ export function Sidebar({
   onOpenCreateSpaceModal,
   onOpenFriendsModal = () => {},
   onManageSpaceMembers,
+  onContextMenuSpace,
   friends = [],
   pendingRequestsCount = 0,
   selectedFriend = null,
@@ -370,41 +373,58 @@ export function Sidebar({
             const isSelected = selectedSpaceId === space.id;
             const count = filterCounts.spaces[space.id] ?? space.task_count ?? 0;
             return (
-              <button
-                key={space.id}
-                onClick={() => onSelectSpace(space.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
-                  isSelected
-                    ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
-                    : "text-[#171923] hover:bg-[#F4F3F5]"
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${userHighlight.textDark}` : "w-4 h-4 text-[#777783]")}
-                  <span className="truncate">{space.name}</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {onManageSpaceMembers && (
+              <div key={space.id} className="relative group/space flex items-center">
+                <button
+                  type="button"
+                  onClick={() => onSelectSpace(space.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    onContextMenuSpace?.(space, e.clientX, e.clientY);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-[12px] text-[14px] font-medium transition-all ${
+                    isSelected
+                      ? `${userHighlight.bgLight} ${userHighlight.textDark} font-semibold border ${userHighlight.border}`
+                      : "text-[#171923] hover:bg-[#F4F3F5]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {getSpaceIcon(space.icon, isSelected ? `w-4 h-4 ${userHighlight.textDark}` : "w-4 h-4 text-[#777783]")}
+                    <span className="truncate">{space.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {onManageSpaceMembers && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onManageSpaceMembers(space);
+                        }}
+                        title="Manage group members"
+                        className="p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-colors"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                     <span
                       onClick={(e) => {
                         e.stopPropagation();
-                        onManageSpaceMembers(space);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        onContextMenuSpace?.(space, rect.right + 4, rect.top);
                       }}
-                      title="Manage group members"
-                      className="p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-colors"
+                      title="Group options (or right-click)"
+                      className="opacity-0 group-hover/space:opacity-100 p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-opacity"
                     >
-                      <Users className="w-3.5 h-3.5" />
+                      <MoreHorizontal className="w-3.5 h-3.5" />
                     </span>
-                  )}
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                    isSelected
-                      ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
-                      : "bg-[#D8D7DE]/70 text-[#777783]"
-                  }`}>
-                    {count}
-                  </span>
-                </div>
-              </button>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      isSelected
+                        ? `${userHighlight.bgLight} ${userHighlight.textDark} border ${userHighlight.border}`
+                        : "bg-[#D8D7DE]/70 text-[#777783]"
+                    }`}>
+                      {count}
+                    </span>
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>

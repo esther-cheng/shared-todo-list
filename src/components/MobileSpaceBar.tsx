@@ -15,6 +15,7 @@ interface MobileSpaceBarProps {
   userColor?: string;
   filterCounts: FilterCounts;
   onOpenCreateSpace: () => void;
+  onContextMenuSpace?: (space: Space, x: number, y: number) => void;
 }
 
 export function MobileSpaceBar({
@@ -26,6 +27,7 @@ export function MobileSpaceBar({
   userColor,
   filterCounts,
   onOpenCreateSpace,
+  onContextMenuSpace,
 }: MobileSpaceBarProps) {
   const userHighlight = getUserHighlightStyle(userColor);
   return (
@@ -116,6 +118,10 @@ export function MobileSpaceBar({
             onClick={() => {
               onSelectSpace(s.id);
               onSelectFilter("all");
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              onContextMenuSpace?.(s, e.clientX, e.clientY);
             }}
             className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all min-h-[38px] ${
               isSelected

@@ -18,6 +18,8 @@ import { ListView } from "@/components/ListView";
 import { WelcomeView } from "@/components/WelcomeView";
 import { FriendsModal } from "@/components/FriendsModal";
 import { SpaceMembersModal } from "@/components/SpaceMembersModal";
+import { GroupContextMenu } from "@/components/GroupContextMenu";
+import { DeleteSpaceModal } from "@/components/DeleteSpaceModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
 import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
 import { Loader2, CheckSquare, Users, X, AtSign, Tag } from "lucide-react";
@@ -65,6 +67,8 @@ export default function HomePage() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<"profile" | "color" | "notifications" | "security">("profile");
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
   const [selectedSpaceForMembers, setSelectedSpaceForMembers] = useState<Space | null>(null);
+  const [contextMenuSpace, setContextMenuSpace] = useState<{ space: Space; x: number; y: number } | null>(null);
+  const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
 
   // Persistent stored filter counts
@@ -360,6 +364,28 @@ export default function HomePage() {
     }
   };
 
+  // Delete space
+  const handleDeleteSpace = async (spaceId: string) => {
+    try {
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete group");
+      }
+      setSpaces((prev) => prev.filter((s) => s.id !== spaceId));
+      setTasks((prev) => prev.filter((t) => t.space_id !== spaceId));
+      if (selectedSpaceId === spaceId) {
+        setSelectedSpaceId("all");
+      }
+      fetchData();
+    } catch (err) {
+      console.error("Failed to delete group:", err);
+      throw err;
+    }
+  };
+
   // Quick add friend to active space from sidebar
   const handleQuickAddToSpace = async (user: SearchedUser, spaceId: string) => {
     try {
@@ -556,6 +582,7 @@ export default function HomePage() {
         userColor={userColor}
         filterCounts={filterCounts}
         onOpenCreateSpace={() => setIsSpaceModalOpen(true)}
+        onContextMenuSpace={(space, x, y) => setContextMenuSpace({ space, x, y })}
       />
 
       {/* Main Content Area */}
@@ -577,6 +604,7 @@ export default function HomePage() {
               onOpenCreateSpaceModal={() => setIsSpaceModalOpen(true)}
               onOpenFriendsModal={() => setIsFriendsModalOpen(true)}
               onManageSpaceMembers={(sp) => setSelectedSpaceForMembers(sp)}
+              onContextMenuSpace={(space, x, y) => setContextMenuSpace({ space, x, y })}
               friends={friendsData.friends}
               pendingRequestsCount={friendsData.pending_incoming.length}
               selectedFriend={selectedFriend}
@@ -894,6 +922,32 @@ export default function HomePage() {
             setSelectedSpaceForMembers(null);
             setIsFriendsModalOpen(true);
           }}
+          onDeleteSpace={(sp) => setSpaceToDelete(sp)}
+        />
+      )}
+
+      {/* Group Context Menu (Right Click & Options Trigger) */}
+      {contextMenuSpace && (
+        <GroupContextMenu
+          space={contextMenuSpace.space}
+          x={contextMenuSpace.x}
+          y={contextMenuSpace.y}
+          onClose={() => setContextMenuSpace(null)}
+          onSelectGroup={(id) => {
+            setSelectedSpaceId(id);
+            setActiveFilter("all");
+          }}
+          onManageMembers={(sp) => setSelectedSpaceForMembers(sp)}
+          onDeleteGroup={(sp) => setSpaceToDelete(sp)}
+        />
+      )}
+
+      {/* Delete Group Confirmation Modal (Requires typing group name) */}
+      {spaceToDelete && (
+        <DeleteSpaceModal
+          space={spaceToDelete}
+          onClose={() => setSpaceToDelete(null)}
+          onConfirmDelete={handleDeleteSpace}
         />
       )}
     </div>

@@ -12,7 +12,8 @@ import {
   Globe, 
   Loader2, 
   Check, 
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 
 interface SpaceMembersModalProps {
@@ -21,6 +22,7 @@ interface SpaceMembersModalProps {
   onClose: () => void;
   onMembersUpdated: () => void;
   onOpenFriendsModal?: () => void;
+  onDeleteSpace?: (space: Space) => void;
 }
 
 export function SpaceMembersModal({
@@ -29,6 +31,7 @@ export function SpaceMembersModal({
   onClose,
   onMembersUpdated,
   onOpenFriendsModal,
+  onDeleteSpace,
 }: SpaceMembersModalProps) {
   const [members, setMembers] = useState<SpaceMember[]>(space.members || []);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
@@ -417,17 +420,30 @@ export function SpaceMembersModal({
 
         {/* Footer */}
         <div className="p-4 border-t border-[#D8D7DE]/70 bg-[#F4F3F5]/50 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-[#777783]">
               {isOwner ? "You are the owner of this group." : "You are a member of this group."}
             </span>
+            {onDeleteSpace && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onDeleteSpace(space);
+                }}
+                className="text-[#FF705B] hover:text-[#C2410C] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete group...</span>
+              </button>
+            )}
             {onOpenFriendsModal && (
               <button
                 type="button"
                 onClick={onOpenFriendsModal}
                 className="text-[#6B21A8] hover:underline font-semibold cursor-pointer"
               >
-                • Find more friends
+                • Find friends
               </button>
             )}
           </div>
