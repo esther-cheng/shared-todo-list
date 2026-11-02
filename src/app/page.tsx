@@ -18,11 +18,12 @@ import { ListView } from "@/components/ListView";
 import { WelcomeView } from "@/components/WelcomeView";
 import { FriendsModal } from "@/components/FriendsModal";
 import { SpaceMembersModal } from "@/components/SpaceMembersModal";
+import { GroupSettingsModal } from "@/components/GroupSettingsModal";
 import { GroupContextMenu } from "@/components/GroupContextMenu";
 import { DeleteSpaceModal } from "@/components/DeleteSpaceModal";
 import { isTaskUntouched, isTaskTaggedForUser, getUserHighlightStyle } from "@/lib/colors";
 import { TASK_CATEGORIES, getCategory } from "@/lib/categories";
-import { Loader2, CheckSquare, Users, X, AtSign, Tag } from "lucide-react";
+import { Loader2, CheckSquare, Users, X, AtSign, Tag, Settings } from "lucide-react";
 
 export default function HomePage() {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -67,6 +68,8 @@ export default function HomePage() {
   const [settingsInitialTab, setSettingsInitialTab] = useState<"profile" | "color" | "notifications" | "security">("profile");
   const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
   const [selectedSpaceForMembers, setSelectedSpaceForMembers] = useState<Space | null>(null);
+  const [selectedSpaceForSettings, setSelectedSpaceForSettings] = useState<Space | null>(null);
+  const [groupSettingsInitialTab, setGroupSettingsInitialTab] = useState<"general" | "members" | "danger">("general");
   const [contextMenuSpace, setContextMenuSpace] = useState<{ space: Space; x: number; y: number } | null>(null);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
   const [dismissedTaskIds, setDismissedTaskIds] = useState<string[]>([]);
@@ -386,6 +389,33 @@ export default function HomePage() {
     }
   };
 
+  // Update space (name, color, icon)
+  const handleUpdateSpace = async (
+    spaceId: string,
+    updates: { name?: string; color?: string; icon?: string }
+  ) => {
+    try {
+      const res = await fetch(`/api/spaces/${spaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update group");
+      }
+      if (data.space) {
+        setSpaces((prev) =>
+          prev.map((s) => (s.id === spaceId ? { ...s, ...data.space } : s))
+        );
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed to update group:", err);
+      throw err;
+    }
+  };
+
   // Quick add friend to active space from sidebar
   const handleQuickAddToSpace = async (user: SearchedUser, spaceId: string) => {
     try {
@@ -634,11 +664,14 @@ export default function HomePage() {
                   const memberCount = currentSpace.members?.length ?? currentSpace.member_count ?? 1;
                   return (
                     <button
-                      onClick={() => setSelectedSpaceForMembers(currentSpace)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] text-xs font-semibold text-[#171923] transition-all cursor-pointer shadow-xs"
-                      title="Manage group members"
+                      onClick={() => {
+                        setSelectedSpaceForSettings(currentSpace);
+                        setGroupSettingsInitialTab("members");
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#777783] hover:text-[#171923] transition-all cursor-pointer shadow-xs"
+                      title="Add people and manage members"
                     >
-                      <Users className="w-3.5 h-3.5 text-[#171923]" />
+                      <Users className="w-3.5 h-3.5" />
                       <span>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
@@ -704,6 +737,27 @@ export default function HomePage() {
                   ({filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"})
                 </span>
               </div>
+
+              {/* Group Settings button (all the way to the right) */}
+              {selectedSpaceId !== "all" && (() => {
+                const currentSpace = spaces.find((s) => s.id === selectedSpaceId);
+                if (!currentSpace) return null;
+                return (
+                  <div className="shrink-0 ml-auto">
+                    <button
+                      onClick={() => {
+                        setSelectedSpaceForSettings(currentSpace);
+                        setGroupSettingsInitialTab("general");
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] hover:border-[#171923] hover:bg-[#F4F3F5] text-xs font-semibold text-[#171923] transition-all cursor-pointer shadow-xs"
+                      title="Group settings (edit name/color, add people, delete group)"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-[#777783]" />
+                      <span>Settings</span>
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Quick Category Filter Bar */}
@@ -937,8 +991,35 @@ export default function HomePage() {
             setSelectedSpaceId(id);
             setActiveFilter("all");
           }}
-          onManageMembers={(sp) => setSelectedSpaceForMembers(sp)}
+          onManageMembers={(sp) => {
+            setSelectedSpaceForSettings(sp);
+            setGroupSettingsInitialTab("members");
+          }}
+          onOpenSettings={(sp) => {
+            setSelectedSpaceForSettings(sp);
+            setGroupSettingsInitialTab("general");
+          }}
           onDeleteGroup={(sp) => setSpaceToDelete(sp)}
+        />
+      )}
+
+      {/* Group Settings Modal (Edit Name/Color/Icon, Add People, Delete Group) */}
+      {selectedSpaceForSettings && currentUser && (
+        <GroupSettingsModal
+          space={selectedSpaceForSettings}
+          currentUser={currentUser}
+          initialTab={groupSettingsInitialTab}
+          onClose={() => setSelectedSpaceForSettings(null)}
+          onUpdateSpace={handleUpdateSpace}
+          onDeleteSpace={(sp) => {
+            setSelectedSpaceForSettings(null);
+            setSpaceToDelete(sp);
+          }}
+          onMembersChanged={fetchData}
+          onOpenFriendsModal={() => {
+            setSelectedSpaceForSettings(null);
+            setIsFriendsModalOpen(true);
+          }}
         />
       )}
 

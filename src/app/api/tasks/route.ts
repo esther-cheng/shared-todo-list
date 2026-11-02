@@ -53,12 +53,12 @@ export async function GET(req: Request) {
           LIMIT 1
         ) AS latest_note
       FROM tasks t
-      LEFT JOIN spaces s ON t.space_id = s.id
+      LEFT JOIN groups s ON (t.group_id = s.id OR t.space_id = s.id)
       LEFT JOIN task_notes n ON t.id = n.task_id
       WHERE (
         s.created_by = $1 OR
-        EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = t.space_id AND sm.user_id = $1) OR
-        NOT EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = t.space_id)
+        EXISTS (SELECT 1 FROM group_members sm WHERE (sm.group_id = t.group_id OR sm.group_id = t.space_id) AND sm.user_id = $1) OR
+        NOT EXISTS (SELECT 1 FROM group_members sm WHERE sm.group_id = t.group_id OR sm.group_id = t.space_id)
       )
     `;
 
@@ -145,10 +145,11 @@ export async function POST(req: Request) {
 
     const result = await sql`
       INSERT INTO tasks (
-        id, space_id, title, description, category, deadline, lead_time_days, reminder_date, status, created_by, last_activity_at
+        id, group_id, space_id, title, description, category, deadline, lead_time_days, reminder_date, status, created_by, last_activity_at
       )
       VALUES (
         ${id},
+        ${space_id},
         ${space_id},
         ${title},
         ${description},

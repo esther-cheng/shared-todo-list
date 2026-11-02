@@ -392,18 +392,6 @@ export function Sidebar({
                     <span className="truncate">{space.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {onManageSpaceMembers && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onManageSpaceMembers(space);
-                        }}
-                        title="Manage group members"
-                        className="p-1 rounded-[6px] text-[#777783] hover:text-[#171923] hover:bg-[#D8D7DE]/60 transition-colors"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                      </span>
-                    )}
                     <span
                       onClick={(e) => {
                         e.stopPropagation();

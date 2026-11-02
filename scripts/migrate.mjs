@@ -57,6 +57,7 @@ const migrationFiles = [
   "migrate-notifications.mjs",
   "migrate-web-push.mjs",
   "migrate-task-categories.mjs",
+  "migrate-spaces-to-groups.mjs",
 ];
 
 for (const file of migrationFiles) {

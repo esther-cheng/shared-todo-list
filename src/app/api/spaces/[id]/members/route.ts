@@ -19,15 +19,15 @@ export async function GET(
 
     // Check if space exists and user has access
     const spaceRows = await sql`
-      SELECT id, name, created_by FROM spaces WHERE id = ${spaceId};
+      SELECT id, name, created_by FROM groups WHERE id = ${spaceId};
     `;
     if (spaceRows.length === 0) {
-      return NextResponse.json({ error: "Space not found" }, { status: 404 });
+      return NextResponse.json({ error: "Group not found" }, { status: 404 });
     }
 
     const memberRows = await sql`
       SELECT 
-        sm.space_id,
+        COALESCE(sm.group_id, sm.space_id) as space_id,
         sm.role,
         sm.created_at,
         u.id as user_id,
@@ -35,9 +35,9 @@ export async function GET(
         u.name,
         u.avatar_color,
         u.is_private
-      FROM space_members sm
+      FROM group_members sm
       JOIN users u ON u.id = sm.user_id
-      WHERE sm.space_id = ${spaceId}
+      WHERE (sm.group_id = ${spaceId} OR sm.space_id = ${spaceId})
       ORDER BY sm.role DESC, u.name ASC;
     `;
 
@@ -78,23 +78,23 @@ export async function POST(
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // 1. Verify space exists
+    // 1. Verify group exists
     const spaceRows = await sql`
-      SELECT id, name, created_by FROM spaces WHERE id = ${spaceId};
+      SELECT id, name, created_by FROM groups WHERE id = ${spaceId};
     `;
     if (spaceRows.length === 0) {
-      return NextResponse.json({ error: "Space not found" }, { status: 404 });
+      return NextResponse.json({ error: "Group not found" }, { status: 404 });
     }
     const space = spaceRows[0];
 
     // 2. Caller must be a member or creator of the space
     const callerMember = await sql`
-      SELECT role FROM space_members 
-      WHERE space_id = ${spaceId} AND user_id = ${user.id};
+      SELECT role FROM group_members 
+      WHERE (group_id = ${spaceId} OR space_id = ${spaceId}) AND user_id = ${user.id};
     `;
     const isCallerAllowed = callerMember.length > 0 || space.created_by === user.id;
     if (!isCallerAllowed) {
-      return NextResponse.json({ error: "You are not a member of this space" }, { status: 403 });
+      return NextResponse.json({ error: "You are not a member of this group" }, { status: 403 });
     }
 
     // 3. Verify target user exists
@@ -110,11 +110,11 @@ export async function POST(
 
     // 4. Check if already a member
     const existingMember = await sql`
-      SELECT role FROM space_members 
-      WHERE space_id = ${spaceId} AND user_id = ${targetUserId};
+      SELECT role FROM group_members 
+      WHERE (group_id = ${spaceId} OR space_id = ${spaceId}) AND user_id = ${targetUserId};
     `;
     if (existingMember.length > 0) {
-      return NextResponse.json({ error: `${targetUser.name} is already a member of this space` }, { status: 409 });
+      return NextResponse.json({ error: `${targetUser.name} is already a member of this group` }, { status: 409 });
     }
 
     // 5. CRITICAL CHECK: User privacy & friendship
@@ -122,21 +122,22 @@ export async function POST(
     const check = await canAddUserToSpace(user.id, targetUserId);
     if (!check.allowed) {
       return NextResponse.json(
-        { error: check.reason || "This user is private. You can only add friends or public users to your spaces." },
+        { error: check.reason || "This user is private. You can only add friends or public users to your groups." },
         { status: 403 }
       );
     }
 
     // 6. Insert new member
     await sql`
-      INSERT INTO space_members (space_id, user_id, role)
-      VALUES (${spaceId}, ${targetUserId}, 'member');
+      INSERT INTO group_members (group_id, space_id, user_id, role)
+      VALUES (${spaceId}, ${spaceId}, ${targetUserId}, 'member')
+      ON CONFLICT (group_id, user_id) DO NOTHING;
     `;
 
     // 7. Return refreshed members list
     const memberRows = await sql`
       SELECT 
-        sm.space_id,
+        COALESCE(sm.group_id, sm.space_id) as space_id,
         sm.role,
         sm.created_at,
         u.id as user_id,
@@ -144,9 +145,9 @@ export async function POST(
         u.name,
         u.avatar_color,
         u.is_private
-      FROM space_members sm
+      FROM group_members sm
       JOIN users u ON u.id = sm.user_id
-      WHERE sm.space_id = ${spaceId}
+      WHERE (sm.group_id = ${spaceId} OR sm.space_id = ${spaceId})
       ORDER BY sm.role DESC, u.name ASC;
     `;
 

@@ -12,17 +12,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch spaces accessible to the user:
-    // Spaces where user is a member, creator, or space has no members (legacy fallback)
+    // Fetch spaces/groups accessible to the user:
+    // Groups where user is a member, creator, or group has no members (legacy fallback)
     const spaces = await sql`
       SELECT s.id, s.name, s.slug, s.color, s.icon, s.created_by, s.created_at,
              COUNT(DISTINCT t.id)::int as task_count
-      FROM spaces s
-      LEFT JOIN space_members sm ON sm.space_id = s.id
-      LEFT JOIN tasks t ON t.space_id = s.id
+      FROM groups s
+      LEFT JOIN group_members sm ON (sm.group_id = s.id OR sm.space_id = s.id)
+      LEFT JOIN tasks t ON (t.group_id = s.id OR t.space_id = s.id)
       WHERE sm.user_id = ${user.id} 
          OR s.created_by = ${user.id}
-         OR NOT EXISTS (SELECT 1 FROM space_members WHERE space_id = s.id)
+         OR NOT EXISTS (SELECT 1 FROM group_members WHERE group_id = s.id OR space_id = s.id)
       GROUP BY s.id, s.name, s.slug, s.color, s.icon, s.created_by, s.created_at
       ORDER BY s.name ASC;
     `;
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     if (spaceIds.length > 0) {
       const memberRows = await sql`
         SELECT 
-          sm.space_id,
+          COALESCE(sm.group_id, sm.space_id) as space_id,
           sm.role,
           sm.created_at,
           u.id as user_id,
@@ -42,9 +42,9 @@ export async function GET(req: Request) {
           u.name,
           u.avatar_color,
           u.is_private
-        FROM space_members sm
+        FROM group_members sm
         JOIN users u ON u.id = sm.user_id
-        WHERE sm.space_id = ANY(${spaceIds})
+        WHERE (sm.group_id = ANY(${spaceIds}) OR sm.space_id = ANY(${spaceIds}))
         ORDER BY sm.role DESC, u.name ASC;
       `;
 
@@ -109,19 +109,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // Insert space with creator
+    // Insert group with creator
     const result = await sql`
-      INSERT INTO spaces (id, name, slug, color, icon, created_by)
+      INSERT INTO groups (id, name, slug, color, icon, created_by)
       VALUES (${id}, ${name.trim()}, ${slug}, ${color}, ${icon}, ${user.id})
       RETURNING *;
     `;
 
     const space = result[0];
 
-    // Add creator as owner in space_members
+    // Add creator as owner in group_members
     await sql`
-      INSERT INTO space_members (space_id, user_id, role)
-      VALUES (${id}, ${user.id}, 'owner');
+      INSERT INTO group_members (group_id, space_id, user_id, role)
+      VALUES (${id}, ${id}, ${user.id}, 'owner');
     `;
 
     // Add selected members
@@ -129,9 +129,9 @@ export async function POST(req: Request) {
       for (const memberId of member_ids) {
         if (memberId && memberId !== user.id) {
           await sql`
-            INSERT INTO space_members (space_id, user_id, role)
-            VALUES (${id}, ${memberId}, 'member')
-            ON CONFLICT (space_id, user_id) DO NOTHING;
+            INSERT INTO group_members (group_id, space_id, user_id, role)
+            VALUES (${id}, ${id}, ${memberId}, 'member')
+            ON CONFLICT (group_id, user_id) DO NOTHING;
           `;
         }
       }
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
     // Fetch members for response
     const memberRows = await sql`
       SELECT 
-        sm.space_id,
+        COALESCE(sm.group_id, sm.space_id) as space_id,
         sm.role,
         sm.created_at,
         u.id as user_id,
@@ -148,9 +148,9 @@ export async function POST(req: Request) {
         u.name,
         u.avatar_color,
         u.is_private
-      FROM space_members sm
+      FROM group_members sm
       JOIN users u ON u.id = sm.user_id
-      WHERE sm.space_id = ${id}
+      WHERE (sm.group_id = ${id} OR sm.space_id = ${id})
       ORDER BY sm.role DESC, u.name ASC;
     `;
 

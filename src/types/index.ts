@@ -62,6 +62,8 @@ export interface SpaceMember {
   created_at?: string;
 }
 
+export type GroupMember = SpaceMember;
+
 export interface Space {
   id: string;
   name: string;
@@ -74,6 +76,8 @@ export interface Space {
   members?: SpaceMember[];
   member_count?: number;
 }
+
+export type Group = Space;
 
 export interface SearchedUser {
   id: string;

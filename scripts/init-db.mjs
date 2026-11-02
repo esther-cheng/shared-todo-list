@@ -60,7 +60,7 @@ async function main() {
   console.log("✓ Sessions table ready");
 
   await sql`
-    CREATE TABLE IF NOT EXISTS spaces (
+    CREATE TABLE IF NOT EXISTS groups (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       slug TEXT UNIQUE NOT NULL,
@@ -70,7 +70,7 @@ async function main() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `;
-  console.log("✓ Spaces table ready");
+  console.log("✓ Groups table ready");
 
   await sql`
     CREATE TABLE IF NOT EXISTS friendships (
@@ -85,20 +85,21 @@ async function main() {
   console.log("✓ Friendships table ready");
 
   await sql`
-    CREATE TABLE IF NOT EXISTS space_members (
-      space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS group_members (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       role TEXT NOT NULL DEFAULT 'member',
       created_at TIMESTAMPTZ DEFAULT NOW(),
-      PRIMARY KEY (space_id, user_id)
+      PRIMARY KEY (group_id, user_id)
     );
   `;
-  console.log("✓ Space members table ready");
+  console.log("✓ Group members table ready");
 
   await sql`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
-      space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+      group_id TEXT REFERENCES groups(id) ON DELETE CASCADE,
+      space_id TEXT REFERENCES groups(id) ON DELETE CASCADE,
       title TEXT NOT NULL,
       description TEXT,
       category TEXT,
@@ -113,6 +114,20 @@ async function main() {
     );
   `;
   console.log("✓ Tasks table ready");
+
+  // Create compatibility views
+  try {
+    await sql`
+      CREATE OR REPLACE VIEW spaces AS 
+        SELECT id, name, slug, color, icon, created_by, created_at FROM groups;
+    `;
+    await sql`
+      CREATE OR REPLACE VIEW space_members AS 
+        SELECT group_id AS space_id, group_id, user_id, role, created_at FROM group_members;
+    `;
+  } catch {
+    // Ignore if views already exist or base table conflict
+  }
 
   await sql`
     CREATE TABLE IF NOT EXISTS task_notes (
@@ -203,7 +218,7 @@ async function main() {
 
   for (const space of defaultSpaces) {
     await sql`
-      INSERT INTO spaces (id, name, slug, color, icon)
+      INSERT INTO groups (id, name, slug, color, icon)
       VALUES (${space.id}, ${space.name}, ${space.slug}, ${space.color}, ${space.icon})
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
@@ -211,7 +226,7 @@ async function main() {
         icon = EXCLUDED.icon;
     `;
   }
-  console.log("✓ Default spaces seeded");
+  console.log("✓ Default groups seeded");
 
   // 3. Seed user-specified tasks if not already seeded
   const existingTasks = await sql`SELECT COUNT(*) FROM tasks;`;

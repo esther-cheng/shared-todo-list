@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Space } from "@/types";
 import { getSpaceIcon } from "@/lib/colors";
-import { Users, Trash2, FolderOpen } from "lucide-react";
+import { Users, Trash2, FolderOpen, Settings } from "lucide-react";
 
 interface GroupContextMenuProps {
   space: Space;
@@ -12,6 +12,7 @@ interface GroupContextMenuProps {
   onClose: () => void;
   onSelectGroup: (spaceId: string) => void;
   onManageMembers: (space: Space) => void;
+  onOpenSettings?: (space: Space) => void;
   onDeleteGroup: (space: Space) => void;
 }
 
@@ -22,6 +23,7 @@ export function GroupContextMenu({
   onClose,
   onSelectGroup,
   onManageMembers,
+  onOpenSettings,
   onDeleteGroup,
 }: GroupContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,20 @@ export function GroupContextMenu({
           <FolderOpen className="w-3.5 h-3.5 text-[#777783]" />
           <span>View group tasks</span>
         </button>
+
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={() => {
+              onOpenSettings(space);
+              onClose();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] text-xs font-semibold text-[#171923] hover:bg-[#F4F3F5] transition-colors cursor-pointer text-left"
+          >
+            <Settings className="w-3.5 h-3.5 text-[#777783]" />
+            <span>Group settings</span>
+          </button>
+        )}
 
         <button
           type="button"

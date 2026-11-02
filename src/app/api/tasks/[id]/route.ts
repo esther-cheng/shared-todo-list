@@ -21,7 +21,7 @@ export async function GET(
         s.color AS space_color,
         s.icon AS space_icon
       FROM tasks t
-      LEFT JOIN spaces s ON t.space_id = s.id
+      LEFT JOIN groups s ON (t.group_id = s.id OR t.space_id = s.id)
       WHERE t.id = ${id};
     `;
 
