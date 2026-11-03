@@ -16,8 +16,10 @@ import {
   Clock, 
   MessageSquare, 
   Check, 
-  ArrowUpRight
+  ArrowUpRight,
+  ListChecks
 } from "lucide-react";
+import { parseTaskDescription } from "@/lib/checklist";
 
 interface TaskCardProps {
   task: Task;
@@ -104,11 +106,30 @@ export function TaskCard({ task, userColor, onExpand, onToggleStatus }: TaskCard
             {task.title}
           </h3>
 
-          {task.description && (
-            <p className="mt-1.5 text-[13px] text-[#777783] line-clamp-2 leading-relaxed">
-              {task.description}
-            </p>
-          )}
+          {(() => {
+            const parsedDesc = parseTaskDescription(task.description);
+            const hasChecklistItems = parsedDesc.hasChecklist && parsedDesc.checklist.length > 0;
+            const completedCount = parsedDesc.checklist.filter((i) => i.completed).length;
+
+            return (
+              <>
+                {parsedDesc.context && (
+                  <p className="mt-1.5 text-[13px] text-[#777783] line-clamp-2 leading-relaxed">
+                    {parsedDesc.context}
+                  </p>
+                )}
+
+                {hasChecklistItems && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-[#777783]">
+                    <ListChecks className="w-3.5 h-3.5 text-[#B78AF2]" />
+                    <span>
+                      {completedCount}/{parsedDesc.checklist.length} checklist {parsedDesc.checklist.length === 1 ? "item" : "items"}
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {categoryObj && !isDone && (
             <p className="mt-1.5 text-[11px] text-[#777783] italic flex items-center gap-1">

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Loader2
 } from "lucide-react";
+import { parseTaskDescription } from "@/lib/checklist";
 
 interface SearchDropdownProps {
   query: string;
@@ -175,7 +176,7 @@ export function SearchDropdown({
                             </span>
                             {task.description && (
                               <p className="text-[11px] text-[#777783] truncate mt-0.5">
-                                {task.description}
+                                {parseTaskDescription(task.description).context || task.description}
                               </p>
                             )}
                           </div>

@@ -21,6 +21,7 @@ import {
   SunMedium,
   ArrowRight
 } from "lucide-react";
+import { parseTaskDescription } from "@/lib/checklist";
 
 export type CalendarMode = "day" | "week" | "month";
 
@@ -405,7 +406,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
 
                           {task.description && (
                             <p className="text-xs text-[#777783] dark:text-zinc-400 line-clamp-1">
-                              {task.description}
+                              {parseTaskDescription(task.description).context || task.description}
                             </p>
                           )}
                         </div>
@@ -841,7 +842,7 @@ export function CalendarView({ tasks, userColor, onExpandTask, onToggleStatus }:
 
                           {task.description && (
                             <p className="text-xs text-[#777783] dark:text-zinc-400 line-clamp-1 pl-7">
-                              {task.description}
+                              {parseTaskDescription(task.description).context || task.description}
                             </p>
                           )}
                         </div>

@@ -1,8 +1,17 @@
+import { TimeUnit } from "./time";
+
+export interface LeadTimePreset {
+  label: string;
+  value: number;
+  unit: TimeUnit;
+}
+
 export interface TaskCategory {
   id: string;
   label: string;
   reminderPrompt: string;
   hints: string[];
+  leadTimePresets: LeadTimePreset[];
   iconName: string;
   badgeBg: string;
   badgeText: string;
@@ -14,8 +23,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "shopping",
     label: "Shopping & Gifts",
-    reminderPrompt: "Remember: shipping time, order processing, holiday postal delays, return windows",
-    hints: ["Shipping time (3–7d)", "Order processing", "Return window", "Gift wrapping"],
+    reminderPrompt: "Remember: shipping delays, order processing time, and return windows",
+    hints: [
+      "Confirm recipient address",
+      "Check sizing or preferences",
+      "Order gift / purchase item",
+      "Wrap gift & write card",
+      "Save receipt & track delivery",
+    ],
+    leadTimePresets: [
+      { label: "Standard shipping", value: 5, unit: "days" },
+      { label: "Express shipping", value: 3, unit: "days" },
+      { label: "Return window", value: 2, unit: "weeks" },
+    ],
     iconName: "shopping",
     badgeBg: "bg-[#FFF6F3]",
     badgeText: "text-[#C2410C]",
@@ -25,8 +45,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "travel",
     label: "Travel & Trips",
-    reminderPrompt: "Remember: passport validity (6+ months), booking windows, check-in deadlines, packing prep",
-    hints: ["Passport validity (6 mo)", "Booking window", "Check-in time", "Packing buffer"],
+    reminderPrompt: "Remember: passport validity (6+ months), check-in windows, and packing prep",
+    hints: [
+      "Verify passport expiration date",
+      "Book flights & lodging",
+      "Pack luggage & essentials",
+      "Download boarding passes & tickets",
+      "Arrange pet care or house sitting",
+    ],
+    leadTimePresets: [
+      { label: "Packing buffer", value: 2, unit: "days" },
+      { label: "Booking window", value: 3, unit: "weeks" },
+      { label: "Passport renewal", value: 2, unit: "months" },
+    ],
     iconName: "plane",
     badgeBg: "bg-[#F0F9FE]",
     badgeText: "text-[#0369A1]",
@@ -36,8 +67,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "documents",
     label: "Documents & Admin",
-    reminderPrompt: "Remember: processing time, in-person appointments, expiration dates, notarization",
-    hints: ["Gov processing time", "Expiration date", "In-person appointment", "Document gathering"],
+    reminderPrompt: "Remember: government processing, notarization, and appointment wait times",
+    hints: [
+      "Gather required IDs & proofs",
+      "Schedule in-person appointment",
+      "Fill out official application",
+      "Get documents notarized or signed",
+      "Pay fee & archive copies",
+    ],
+    leadTimePresets: [
+      { label: "Doc gathering", value: 3, unit: "days" },
+      { label: "Appointment wait", value: 2, unit: "weeks" },
+      { label: "Gov processing", value: 1, unit: "months" },
+    ],
     iconName: "document",
     badgeBg: "bg-[#F5EEFD]",
     badgeText: "text-[#6B21A8]",
@@ -47,8 +89,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "health",
     label: "Health & Appointments",
-    reminderPrompt: "Remember: appointment waitlists, insurance pre-authorizations, prescription refills, fasting prep",
-    hints: ["Specialist waitlist", "Prior authorization", "Prescription refill", "Prep fasting"],
+    reminderPrompt: "Remember: appointment waitlists, prior-authorization, and prescription refills",
+    hints: [
+      "Confirm appointment date & time",
+      "Review fasting or prep instructions",
+      "Call insurance for prior-authorization",
+      "Bring ID & insurance cards",
+      "Request prescription refill",
+    ],
+    leadTimePresets: [
+      { label: "Fasting & prep", value: 2, unit: "days" },
+      { label: "Rx refill buffer", value: 5, unit: "days" },
+      { label: "Specialist waitlist", value: 3, unit: "weeks" },
+    ],
     iconName: "health",
     badgeBg: "bg-[#EFF8F5]",
     badgeText: "text-[#065F46]",
@@ -58,8 +111,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "events",
     label: "Events & Celebrations",
-    reminderPrompt: "Remember: RSVP deadlines, venue reservation cutoffs, catering deposits, invitation mail dates",
-    hints: ["RSVP cutoff", "Venue deposit", "Catering headcount", "Invitations mail date"],
+    reminderPrompt: "Remember: RSVP cutoff dates, venue deposits, and invitation delivery times",
+    hints: [
+      "Send invitations & track RSVPs",
+      "Finalize guest headcount",
+      "Confirm venue & pay deposit",
+      "Order catering, food, & drinks",
+      "Pick up decorations & supplies",
+    ],
+    leadTimePresets: [
+      { label: "Final supplies & setup", value: 3, unit: "days" },
+      { label: "RSVP cutoff", value: 2, unit: "weeks" },
+      { label: "Venue deposit", value: 1, unit: "months" },
+    ],
     iconName: "calendar",
     badgeBg: "bg-[#FDF2F8]",
     badgeText: "text-[#9D174D]",
@@ -69,8 +133,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "team",
     label: "Team & Sports",
-    reminderPrompt: "Remember: roster registration cutoffs, uniform & gear ordering, travel coordination, waivers",
-    hints: ["Registration cutoff", "Uniform delivery", "Waivers & physicals", "Travel logistics"],
+    reminderPrompt: "Remember: registration deadlines, uniform delivery times, and travel coordination",
+    hints: [
+      "Complete registration form",
+      "Sign liability waiver & upload physical",
+      "Order uniform & necessary gear",
+      "Pay league / tournament fees",
+      "Coordinate carpool & schedule",
+    ],
+    leadTimePresets: [
+      { label: "Uniform & gear check", value: 4, unit: "days" },
+      { label: "Roster cutoff", value: 2, unit: "weeks" },
+      { label: "Tournament travel", value: 1, unit: "months" },
+    ],
     iconName: "team",
     badgeBg: "bg-[#FEF3C7]",
     badgeText: "text-[#B45309]",
@@ -80,8 +155,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "home",
     label: "Home & Maintenance",
-    reminderPrompt: "Remember: contractor lead times, parts & material delivery, weather windows, municipal permits",
-    hints: ["Contractor schedule", "Parts delivery", "Weather window", "Permits"],
+    reminderPrompt: "Remember: contractor lead times, parts delivery, and municipal permit reviews",
+    hints: [
+      "Take measurements & inspect area",
+      "Purchase materials & parts",
+      "Request quotes & book contractor",
+      "Clear workspace & protect surfaces",
+      "Test repair & clean up area",
+    ],
+    leadTimePresets: [
+      { label: "Parts delivery", value: 5, unit: "days" },
+      { label: "Contractor booking", value: 2, unit: "weeks" },
+      { label: "Permits & review", value: 1, unit: "months" },
+    ],
     iconName: "home",
     badgeBg: "bg-[#EEF2FF]",
     badgeText: "text-[#4338CA]",
@@ -91,8 +177,19 @@ export const TASK_CATEGORIES: TaskCategory[] = [
   {
     id: "finance",
     label: "Finances & Bills",
-    reminderPrompt: "Remember: statement due dates, bank transfer clearing times (2–3 business days), grace periods",
-    hints: ["Bank transfer (2–3d)", "Grace period", "Auto-pay cutoff", "Tax documents"],
+    reminderPrompt: "Remember: bank clearing times (2–3 business days), grace periods, and statement cuts",
+    hints: [
+      "Review statement & verify charges",
+      "Check account balance for funds",
+      "Submit payment / transfer",
+      "Save confirmation receipt",
+      "Update monthly budget tracker",
+    ],
+    leadTimePresets: [
+      { label: "Bank clearing (ACH)", value: 3, unit: "days" },
+      { label: "Statement review", value: 1, unit: "weeks" },
+      { label: "Tax preparation", value: 2, unit: "weeks" },
+    ],
     iconName: "finance",
     badgeBg: "bg-[#CCFBF1]",
     badgeText: "text-[#0F766E]",

@@ -11,7 +11,8 @@ import {
   calculateTotalDays,
   formatLeadDurationLong,
 } from "@/lib/time";
-import { X, Clock, Calendar, Plus, ChevronDown, Check, Loader2, Tag, Sparkles } from "lucide-react";
+import { X, Clock, Calendar, Plus, ChevronDown, Check, Loader2, Tag, Sparkles, Zap, ListChecks, FileText } from "lucide-react";
+import { parseTaskDescription, serializeTaskDescription, ChecklistItem } from "@/lib/checklist";
 
 interface CreateTaskModalProps {
   spaces: Space[];
@@ -58,7 +59,20 @@ export function CreateTaskModal({
   }, [spaces]);
 
   const [title, setTitle] = useState<string>(() => draftLoaded?.title || "");
-  const [description, setDescription] = useState<string>(() => draftLoaded?.description || "");
+  const initialParsed = parseTaskDescription(draftLoaded?.description || "");
+  const [context, setContext] = useState<string>(() => {
+    if (draftLoaded?.context !== undefined) return draftLoaded.context;
+    return initialParsed.context;
+  });
+  const [hasChecklist, setHasChecklist] = useState<boolean>(() => {
+    if (draftLoaded?.hasChecklist !== undefined) return draftLoaded.hasChecklist;
+    return initialParsed.hasChecklist;
+  });
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(() => {
+    if (draftLoaded?.checklist && Array.isArray(draftLoaded.checklist)) return draftLoaded.checklist;
+    return initialParsed.checklist;
+  });
+  const [customChecklistInput, setCustomChecklistInput] = useState("");
   const [category, setCategory] = useState<string>(() => draftLoaded?.category || "shopping");
   const selectedCategoryObj = getCategory(category);
   const [spaceId, setSpaceId] = useState(() => {
@@ -150,12 +164,86 @@ export function CreateTaskModal({
 
   const [leadTimeValue, setLeadTimeValue] = useState<string | number>(() => initialLead.value);
   const [leadTimeUnit, setLeadTimeUnit] = useState<TimeUnit>(() => initialLead.unit);
+  const [selectedPresets, setSelectedPresets] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSelectedPresets([]);
+  }, [category]);
+
+  const handleTogglePreset = (preset: { label: string; value: number; unit: TimeUnit }) => {
+    const isSelected = selectedPresets.includes(preset.label);
+    const newPresets = isSelected
+      ? selectedPresets.filter((lbl) => lbl !== preset.label)
+      : [...selectedPresets, preset.label];
+
+    setSelectedPresets(newPresets);
+
+    if (newPresets.length === 0) {
+      setLeadTimeValue(0);
+      setLeadTimeUnit("days");
+      return;
+    }
+
+    const presetsMap = new Map(selectedCategoryObj?.leadTimePresets.map((p) => [p.label, p]));
+    const sumDays = newPresets.reduce((total, label) => {
+      const p = presetsMap.get(label);
+      return total + (p ? calculateTotalDays(p.value, p.unit) : 0);
+    }, 0);
+
+    const parsed = parseLeadTimeToUnit(sumDays);
+    setLeadTimeValue(parsed.value);
+    setLeadTimeUnit(parsed.unit);
+  };
 
   const totalLeadDays = calculateTotalDays(leadTimeValue, leadTimeUnit);
 
+  const handleToggleSuggestedHint = (hint: string) => {
+    const isSelected = checklist.some(
+      (item) => item.text.trim().toLowerCase() === hint.trim().toLowerCase()
+    );
+
+    if (isSelected) {
+      // Unselect it! Remove from checklist
+      setChecklist((prev) =>
+        prev.filter((item) => item.text.trim().toLowerCase() !== hint.trim().toLowerCase())
+      );
+    } else {
+      // Select it! Automatically open checklist section if not open
+      setHasChecklist(true);
+      setChecklist((prev) => [
+        ...prev,
+        {
+          id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          text: hint.trim(),
+          completed: false,
+        },
+      ]);
+    }
+  };
+
+  const handleAddCustomChecklistItem = () => {
+    if (!customChecklistInput.trim()) return;
+    setHasChecklist(true);
+    setChecklist((prev) => [
+      ...prev,
+      {
+        id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        text: customChecklistInput.trim(),
+        completed: false,
+      },
+    ]);
+    setCustomChecklistInput("");
+  };
+
+  const handleRemoveChecklistItem = (id: string) => {
+    setChecklist((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const [hasRestoredDraft, setHasRestoredDraft] = useState(() => Boolean(
     draftLoaded?.title ||
+    draftLoaded?.context ||
     draftLoaded?.description ||
+    (draftLoaded?.checklist && draftLoaded.checklist.length > 0) ||
     draftLoaded?.deadline ||
     (draftLoaded?.leadTimeDays && draftLoaded.leadTimeDays > 0) ||
     (draftLoaded?.leadTimeValue && Number(draftLoaded.leadTimeValue) > 0)
@@ -165,8 +253,14 @@ export function CreateTaskModal({
   // Sync draft to localStorage on any field change
   useEffect(() => {
     const key = `tandem_task_draft_${currentUser || "default"}`;
+    const serializedDesc = serializeTaskDescription(context, checklist, hasChecklist);
     const hasContent = Boolean(
-      title.trim() || description.trim() || deadline || totalLeadDays > 0 || category
+      title.trim() ||
+      context.trim() ||
+      (hasChecklist && checklist.length > 0) ||
+      deadline ||
+      totalLeadDays > 0 ||
+      category
     );
 
     try {
@@ -175,7 +269,10 @@ export function CreateTaskModal({
           key,
           JSON.stringify({
             title,
-            description,
+            context,
+            hasChecklist,
+            checklist,
+            description: serializedDesc,
             spaceId,
             category,
             deadline,
@@ -190,7 +287,7 @@ export function CreateTaskModal({
     } catch (e) {
       console.error("Failed to sync task draft:", e);
     }
-  }, [title, description, spaceId, category, deadline, leadTimeValue, leadTimeUnit, totalLeadDays, currentUser]);
+  }, [title, context, hasChecklist, checklist, spaceId, category, deadline, leadTimeValue, leadTimeUnit, totalLeadDays, currentUser]);
 
   const handleClearDraft = () => {
     try {
@@ -199,7 +296,10 @@ export function CreateTaskModal({
       console.error("Failed to clear draft:", e);
     }
     setTitle("");
-    setDescription("");
+    setContext("");
+    setHasChecklist(false);
+    setChecklist([]);
+    setCustomChecklistInput("");
     setCategory("shopping");
     setDeadline("");
     setLeadTimeValue(0);
@@ -220,9 +320,10 @@ export function CreateTaskModal({
 
     setIsSubmitting(true);
     try {
+      const finalDescription = serializeTaskDescription(context, checklist, hasChecklist);
       await onCreateTask({
         title,
-        description,
+        description: finalDescription,
         space_id: spaceId,
         category: category || null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
@@ -440,31 +541,14 @@ export function CreateTaskModal({
               })}
             </div>
 
-            {/* Grayed-out prompt reminders for the active category */}
+            {/* Contextual guidance banner for the active category */}
             {selectedCategoryObj && (
-              <div className="p-2.5 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE]/80 text-[#777783] space-y-1.5 animate-in fade-in duration-150">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#171923]">
-                  <Sparkles className="w-3.5 h-3.5 text-[#B78AF2] shrink-0" />
-                  <span>Checklist & estimated time reminders:</span>
-                </div>
-                <p className="text-[11px] text-[#777783] leading-relaxed italic">
-                  {selectedCategoryObj.reminderPrompt}
+              <div className="px-3 py-2 rounded-[10px] bg-[#F4F3F5] border border-[#D8D7DE]/80 flex items-start gap-2 text-[11px] animate-in fade-in duration-150">
+                <Sparkles className="w-3.5 h-3.5 text-[#B78AF2] shrink-0 mt-0.5" />
+                <p className="text-[#171923] leading-relaxed">
+                  <strong className="font-semibold text-[#171923]">Don&apos;t forget: </strong>
+                  <span className="text-[#777783]">{selectedCategoryObj.reminderPrompt.replace(/^Remember:\s*/i, "")}</span>
                 </p>
-                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                  {selectedCategoryObj.hints.map((hint) => (
-                    <button
-                      key={hint}
-                      type="button"
-                      onClick={() => {
-                        setDescription((prev: string) => (prev ? `${prev}\n• ${hint}` : `• ${hint}`));
-                      }}
-                      title="Click to add to notes"
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#FFFFFF] border border-[#D8D7DE] text-[#777783] hover:text-[#171923] hover:border-[#171923] transition-colors cursor-pointer"
-                    >
-                      + {hint}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
           </div>
@@ -486,16 +570,170 @@ export function CreateTaskModal({
 
           {/* Context / Notes */}
           <div>
-            <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase mb-1 block">
-              Context & Notes
+            <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase flex items-center gap-1.5 mb-1.5">
+              <FileText className="w-3 h-3 text-[#777783]" />
+              <span>Context & Notes</span>
             </label>
             <textarea
-              rows={4}
-              placeholder="Instructions, links, or checklist..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full min-h-[100px] text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] resize-y"
+              rows={3}
+              placeholder="Extra details, links, or instructions..."
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              className="w-full min-h-[76px] text-xs px-3 py-2 rounded-[10px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] resize-y placeholder:text-[#777783]/70"
             />
+          </div>
+
+          {/* Checklist (Separate Section) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold tracking-wider text-[#777783] uppercase flex items-center gap-1.5">
+                <ListChecks className="w-3.5 h-3.5 text-[#171923]" />
+                <span>Checklist</span>
+                {hasChecklist && checklist.length > 0 && (
+                  <span className="text-[10px] font-normal text-[#777783] lowercase">
+                    ({checklist.length} {checklist.length === 1 ? "item" : "items"})
+                  </span>
+                )}
+              </label>
+
+              {hasChecklist && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasChecklist(false);
+                    setChecklist([]);
+                  }}
+                  className="text-[11px] font-semibold text-[#777783] hover:text-[#FF705B] transition-colors cursor-pointer"
+                >
+                  Remove checklist
+                </button>
+              )}
+            </div>
+
+            {!hasChecklist ? (
+              <button
+                type="button"
+                onClick={() => setHasChecklist(true)}
+                className="w-full flex items-center justify-between p-2.5 rounded-[10px] border border-dashed border-[#D8D7DE] hover:border-[#B78AF2] bg-[#FFFFFF] hover:bg-[#F4F3F5] text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-[#F4F3F5] group-hover:bg-[#B78AF2]/20 text-[#777783] group-hover:text-[#6B21A8] flex items-center justify-center transition-colors">
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </span>
+                  <div>
+                    <span className="text-xs font-semibold text-[#171923] block leading-tight">
+                      Add a checklist
+                    </span>
+                    <span className="text-[10px] text-[#777783]">
+                      Subtasks and key steps to complete
+                    </span>
+                  </div>
+                </div>
+                {selectedCategoryObj && selectedCategoryObj.hints.length > 0 && (
+                  <span className="text-[10px] font-medium text-[#6B21A8] bg-[#F4ECFC] px-2 py-0.5 rounded-full shrink-0 border border-[#B78AF2]/30">
+                    {selectedCategoryObj.hints.length} subtasks suggested
+                  </span>
+                )}
+              </button>
+            ) : (
+              <div className="p-3 rounded-[12px] bg-[#F4F3F5] border border-[#D8D7DE] space-y-2.5 animate-in fade-in duration-150">
+                {/* Category suggestions */}
+                {selectedCategoryObj && selectedCategoryObj.hints.length > 0 && (
+                  <div className="space-y-1.5 pb-2 border-b border-[#D8D7DE]/70">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#171923]">
+                        <Sparkles className="w-3 h-3 text-[#B78AF2]" />
+                        <span>Suggested subtasks for {selectedCategoryObj.label}:</span>
+                      </span>
+                      <span className="text-[9px] text-[#777783]">Tap to toggle</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedCategoryObj.hints.map((hint) => {
+                        const isSelected = checklist.some(
+                          (item) => item.text.trim().toLowerCase() === hint.trim().toLowerCase()
+                        );
+                        return (
+                          <button
+                            key={hint}
+                            type="button"
+                            onClick={() => handleToggleSuggestedHint(hint)}
+                            title={isSelected ? "Click to unselect item" : "Click to select item"}
+                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-[#171923] text-white border-[#171923] shadow-2xs font-semibold"
+                                : "bg-[#FFFFFF] text-[#171923] border-[#D8D7DE] hover:border-[#B78AF2] hover:bg-[#FFFFFF]"
+                            }`}
+                          >
+                            {isSelected ? (
+                              <Check className="w-2.5 h-2.5 text-[#B78AF2] stroke-[2.5]" />
+                            ) : (
+                              <Plus className="w-2.5 h-2.5 text-[#777783]" />
+                            )}
+                            <span>{hint}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Items list */}
+                {checklist.length > 0 ? (
+                  <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                    {checklist.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE]/70 text-xs text-[#171923]"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#B78AF2] shrink-0" />
+                          <span className="truncate">{item.text}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveChecklistItem(item.id)}
+                          className="text-[#777783] hover:text-[#FF705B] p-0.5 rounded-[4px] transition-colors cursor-pointer shrink-0"
+                          title="Remove item"
+                          aria-label={`Remove ${item.text}`}
+                        >
+                          <X className="w-3 h-3 stroke-[2.5]" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-[11px] text-[#777783]">
+                    No items added yet. Pick from suggestions above or type one below.
+                  </div>
+                )}
+
+                {/* Add custom item input */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  <input
+                    type="text"
+                    value={customChecklistInput}
+                    onChange={(e) => setCustomChecklistInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddCustomChecklistItem();
+                      }
+                    }}
+                    placeholder="Add custom checklist item..."
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[34px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomChecklistItem}
+                    disabled={!customChecklistInput.trim()}
+                    className="px-3 py-1.5 rounded-[8px] text-xs font-semibold bg-[#171923] text-white hover:bg-[#2D313E] disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer flex items-center gap-1 min-h-[34px]"
+                  >
+                    <Plus className="w-3 h-3 stroke-[2.5]" />
+                    <span>Add</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Target Deadline & Estimated Time Needed */}
@@ -525,7 +763,10 @@ export function CreateTaskModal({
                   step="1"
                   placeholder="0"
                   value={leadTimeValue}
-                  onChange={(e) => setLeadTimeValue(e.target.value)}
+                  onChange={(e) => {
+                    setLeadTimeValue(e.target.value);
+                    setSelectedPresets([]);
+                  }}
                   onBlur={() => {
                     const trimmed = typeof leadTimeValue === "string" ? leadTimeValue.trim() : "";
                     let finalNum = 0;
@@ -542,7 +783,10 @@ export function CreateTaskModal({
                 />
                 <select
                   value={leadTimeUnit}
-                  onChange={(e) => setLeadTimeUnit(e.target.value as TimeUnit)}
+                  onChange={(e) => {
+                    setLeadTimeUnit(e.target.value as TimeUnit);
+                    setSelectedPresets([]);
+                  }}
                   className="flex-1 text-xs px-2.5 py-1.5 rounded-[8px] bg-[#FFFFFF] border border-[#D8D7DE] focus:border-[#B78AF2] focus:outline-none text-[#171923] min-h-[38px] font-medium cursor-pointer"
                 >
                   {TIME_UNIT_OPTIONS.map((opt) => (
@@ -552,7 +796,67 @@ export function CreateTaskModal({
                   ))}
                 </select>
               </div>
-              <span className="text-[10px] text-[#777783] mt-1 block">
+
+              {/* Additive Lead Time Presets */}
+              {selectedCategoryObj?.leadTimePresets && selectedCategoryObj.leadTimePresets.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-[#777783]">
+                      <Zap className="w-3 h-3 text-[#FF705B]" />
+                      <span>Select buffers to add together:</span>
+                    </span>
+                    {selectedPresets.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedPresets([]);
+                          setLeadTimeValue(0);
+                          setLeadTimeUnit("days");
+                        }}
+                        className="text-[10px] text-[#777783] hover:text-[#171923] underline cursor-pointer"
+                      >
+                        Reset ({selectedPresets.length} selected)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedCategoryObj.leadTimePresets.map((preset) => {
+                      const isSelected = selectedPresets.includes(preset.label);
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handleTogglePreset(preset)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[#171923] text-white border-[#171923] shadow-xs"
+                              : "bg-[#FFFFFF] text-[#171923] border-[#D8D7DE] hover:border-[#B78AF2] hover:bg-[#F4F3F5]"
+                          }`}
+                          title={
+                            isSelected
+                              ? `Click to remove ${preset.value} ${preset.unit}`
+                              : `Click to add +${preset.value} ${preset.unit} (${preset.label})`
+                          }
+                        >
+                          {isSelected ? (
+                            <Check className="w-2.5 h-2.5 text-[#B78AF2]" />
+                          ) : (
+                            <Plus className="w-2.5 h-2.5 text-[#777783]" />
+                          )}
+                          <span className="font-semibold">
+                            {preset.value} {preset.unit === "days" ? "d" : preset.unit === "weeks" ? "w" : preset.unit === "months" ? "mo" : "y"}
+                          </span>
+                          <span className={isSelected ? "text-white/80" : "text-[#777783]"}>
+                            {preset.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <span className="text-[10px] text-[#777783] mt-1.5 block">
                 How much lead time needed to start before the deadline
               </span>
             </div>
